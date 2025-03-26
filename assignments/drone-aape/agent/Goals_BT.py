@@ -309,7 +309,7 @@ class Avoid:
         
         # Configuration
         self.TURN_ANGLE = 30  # degrees per turn
-        self.MIN_DISTANCE = 5  # meters
+        self.MIN_DISTANCE = 2  # meters
         self.REQUIRED_HITS = 1   # min sensors detecting obstacle
         
         # Turn tracking
