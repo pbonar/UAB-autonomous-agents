@@ -77,7 +77,7 @@ class Turn:
             turn_angle = random.randint(10, 360)
             direction = random.choice(["tl", "tr"])  # "tl" for left, "tr" for right"
 
-            print(f"🔄 Turning {turn_angle} degrees to the {'left' if direction == 'tl' else 'right'}")
+            print(f"Turning {turn_angle} degrees to the {'left' if direction == 'tl' else 'right'}")
             
             # Calculate the target rotation
             if direction == "tl":  # Turning left (counter-clockwise)
@@ -129,7 +129,7 @@ class Turn:
             # Stop turning
             await self.a_agent.send_message("action", "nt")
 
-            print(f"✅ Turn complete! Started at {initial_rotation:.2f}°, ended at {current_rotation:.2f}°, turned {abs(total_turned):.2f}° towards the {'left' if direction == 'tl' else 'right'}")
+            print(f"Turn complete! Started at {initial_rotation:.2f}°, ended at {current_rotation:.2f}°, turned {abs(total_turned):.2f}° towards the {'left' if direction == 'tl' else 'right'}")
             await asyncio.sleep(2)
             return True
 
@@ -138,7 +138,7 @@ class Turn:
             await self.a_agent.send_message("action", "nt")
             return False
         except Exception as e:
-            print(f"❌ Error in Turn behavior: {e}")
+            print(f"Error in Turn behavior: {e}")
             await self.a_agent.send_message("action", "nt")  # Try to stop turning if there's an error
             return False
 
