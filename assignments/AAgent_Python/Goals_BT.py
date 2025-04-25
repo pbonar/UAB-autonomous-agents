@@ -729,7 +729,8 @@ class LeaveFlowers:
     async def run(self):
         try:
             print("Leaving flowers at the Base...")
-            await self.a_agent.send_message("action", "leave:AlienFlower,2") # como va esto??
+            await self.a_agent.send_message("action", "leave,AlienFlower,2")
+            asyncio.sleep(0.5)
             return True
         
         except Exception as e:

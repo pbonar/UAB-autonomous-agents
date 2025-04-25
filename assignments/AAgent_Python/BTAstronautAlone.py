@@ -224,6 +224,31 @@ class BN_InventoryFull(pt.behaviour.Behaviour):
     def terminate(self, new_status: common.Status):
         pass  # No task to cancel
  
+ # BEHAVIOUR: Check if inventory is full so that we know when to go back to base
+class BN_LeaveFlowers(pt.behaviour.Behaviour):
+    def __init__(self, aagent):
+        self.my_goal = None
+        super(BN_LeaveFlowers, self).__init__("BN_LeaveFlowers")
+        self.my_agent = aagent
+
+    def initialise(self):
+        self.my_goal = asyncio.create_task(Goals_BT.LeaveFlowers(self.my_agent).run())
+
+    def update(self):
+        if not self.my_goal.done():
+            return pt.common.Status.RUNNING
+        else:
+            res = self.my_goal.result()
+            if res:
+                print("BN_WalkToBase completed with SUCCESS")
+                return pt.common.Status.SUCCESS
+            else:
+                print("BN_WalkToBase completed with FAILURE")
+                return pt.common.Status.FAILURE
+
+    def terminate(self, new_status: common.Status):
+        self.my_goal.cancel()   
+
 
 
 class BTAstronautAlone:
@@ -236,7 +261,7 @@ class BTAstronautAlone:
 
         # Back to base logic
         retreat = pt.composites.Sequence(name="GoToBase", memory=True)
-        retreat.add_children([BN_InventoryFull(aagent), BN_WalkToBase(aagent), BN_DoNothing(aagent)])
+        retreat.add_children([BN_InventoryFull(aagent), BN_WalkToBase(aagent), BN_LeaveFlowers(aagent)])
 
         # Gather flower logic
         detection = pt.composites.Sequence(name="DetectFlower", memory=True)
