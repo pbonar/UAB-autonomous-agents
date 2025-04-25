@@ -635,7 +635,9 @@ class FaceFlower:
             direction = self.turn_direction(flower_idx)
             print(f"🔄 Turning to face flower (from sensor {flower_idx} to 2), direction: {direction}")
             await DirectedTurn(self.a_agent, direction).run()
-            #await asyncio.sleep(0.05)  # Small delay before rechecking
+            await asyncio.sleep(0.01)
+
+            
 
 
 class WalkToFlower:
@@ -668,7 +670,9 @@ class WalkToFlower:
                     print("✅ New flower added to inventory!")
                     await self.a_agent.send_message("action", "ntm")  # Stop moving
                     return True
-                
+                elif current_count >= 2:
+                    return True
+
                 await asyncio.sleep(0.05)  # Small delay between checks
 
         except asyncio.CancelledError:
@@ -709,10 +713,16 @@ class CheckInventory:
     
     async def run(self):
         try:
-            flowers = self.i_state.inventory["AlienFlower"]
+            print("I am checking how many flowers I have")
+            flowers = 0
+            for item in self.i_state.myInventoryList:
+                if item["name"] == "AlienFlower":
+                    flowers = item["amount"]
+                    break
+
             print(f"Inventory has {flowers} flowers")
             return flowers >= 2
-        
+
         except Exception as e:
             print(f"Error in CheckInventory: {e}")
             return False
@@ -727,7 +737,8 @@ class WalkToBase:
     async def run(self):
         try:
             print("Walking to Base...")
-            await self.a_agent.send_message("action", "walk_to:Base") # mirar formato
+            await self.a_agent.send_message("action", "walk_to,Base")
+            print("Arrived to Base!")
             return True
         
         except Exception as e:

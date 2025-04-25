@@ -91,7 +91,7 @@ class BN_TurnRandom(pt.behaviour.Behaviour):
         self.logger.debug("Terminate BN_TurnRandom")
         self.my_goal.cancel()
 
-
+# BEHAVIOUR: Agent will return SUCCESS iff it has a flower in sight
 class BN_DetectFlower(pt.behaviour.Behaviour):
     def __init__(self, aagent):
         self.my_goal = None
@@ -117,6 +117,7 @@ class BN_DetectFlower(pt.behaviour.Behaviour):
     def terminate(self, new_status: common.Status):
         pass
 
+# BEHAVIOUR: The agent will rotate until it's facing a flower
 class BN_FaceFlower(pt.behaviour.Behaviour):
     def __init__(self, aagent):
         self.my_goal = None
@@ -134,16 +135,16 @@ class BN_FaceFlower(pt.behaviour.Behaviour):
         else:
             res = self.my_goal.result()
             if res:
-                # print("BN_FaceFlower completed with SUCCESS")
+                print("BN_FaceFlower completed with SUCCESS")
                 return pt.common.Status.SUCCESS
             else:
-                # print("BN_FaceFlower completed with FAILURE")
+                print("BN_FaceFlower completed with FAILURE")
                 return pt.common.Status.FAILURE
 
     def terminate(self, new_status: common.Status):
         self.my_goal.cancel()    
 
-        
+# BEHAVIOUR: Walk towards the flower (Agent has to already be facing the right direction)
 class BN_WalkToFlower(pt.behaviour.Behaviour):
     def __init__(self, aagent):
         self.my_goal = None
@@ -160,14 +161,67 @@ class BN_WalkToFlower(pt.behaviour.Behaviour):
         else:
             res = self.my_goal.result()
             if res:
-                print("BN_Turn completed with SUCCESS")
+                print("BN_WalkToFlower completed with SUCCESS")
                 return pt.common.Status.SUCCESS
             else:
-                print("BN_Turn completed with FAILURE")
+                print("BN_WalkToFlower completed with FAILURE")
                 return pt.common.Status.FAILURE
 
     def terminate(self, new_status: common.Status):
         self.my_goal.cancel()
+
+# BEHAVIOUR: Walk to base location
+class BN_WalkToBase(pt.behaviour.Behaviour):
+    def __init__(self, aagent):
+        self.my_goal = None
+        # print("Initializing BN_WalkToBase")
+        super(BN_WalkToBase, self).__init__("BN_WalkToBase")
+        self.my_agent = aagent
+
+    def initialise(self):
+        self.my_goal = asyncio.create_task(Goals_BT.WalkToBase(self.my_agent).run())
+
+    def update(self):
+        if not self.my_goal.done():
+            return pt.common.Status.RUNNING
+        else:
+            res = self.my_goal.result()
+            if res:
+                print("BN_WalkToBase completed with SUCCESS")
+                return pt.common.Status.SUCCESS
+            else:
+                print("BN_WalkToBase completed with FAILURE")
+                return pt.common.Status.FAILURE
+
+    def terminate(self, new_status: common.Status):
+        self.my_goal.cancel()   
+
+# BEHAVIOUR: Check if inventory is full so that we know when to go back to base
+class BN_InventoryFull(pt.behaviour.Behaviour):
+    def __init__(self, aagent):
+        self.my_goal = None
+        # print("Initializing BN_InventoryFull")
+        super(BN_InventoryFull, self).__init__("BN_InventoryFull")
+        self.my_agent = aagent
+
+    def initialise(self):
+        self.my_goal = asyncio.create_task(Goals_BT.CheckInventory(self.my_agent).run())
+
+    def update(self):
+        if not self.my_goal.done():
+            return pt.common.Status.RUNNING
+        else:
+            res = self.my_goal.result()
+            if res:
+                print("BN_InventoryFull completed with SUCCESS")
+                return pt.common.Status.SUCCESS
+            else:
+                print("BN_InventoryFull completed with FAILURE")
+                return pt.common.Status.FAILURE
+
+    def terminate(self, new_status: common.Status):
+        self.my_goal.cancel()  
+ 
 
 
 class BTAstronautAlone:
@@ -176,25 +230,22 @@ class BTAstronautAlone:
 
         self.aagent = aagent
 
-        # VERSION 1
-        # self.root = pt.composites.Sequence(name="Sequence", memory=True)
-        # self.root.add_children([BN_TurnRandom(aagent),
-        #                         BN_ForwardRandom(aagent),
-        #                         BN_DoNothing(aagent)])
+        # FINAL VERSION
 
-        # VERSION 2
-        # self.root = pt.composites.Parallel("Parallel", policy=py_trees.common.ParallelPolicy.SuccessOnAll())
-        # self.root.add_children([BN_ForwardRandom(aagent), BN_TurnRandom(aagent)])
+        # Back to base logic
+        retreat = pt.composites.Sequence(name="GoToBase", memory=True)
+        retreat.add_children([BN_InventoryFull(aagent), BN_WalkToBase(aagent), BN_DoNothing(aagent)])
 
-        # VERSION 3 (with DetectFlower)
+        # Gather flower logic
         detection = pt.composites.Sequence(name="DetectFlower", memory=True)
-        detection.add_children([BN_DetectFlower(aagent), BN_FaceFlower(aagent), BN_WalkToFlower(aagent), BN_DoNothing(aagent)])
-        
+        detection.add_children([BN_DetectFlower(aagent), BN_FaceFlower(aagent), BN_WalkToFlower(aagent)])
+
+        # Roaming logic
         roaming = pt.composites.Parallel("Parallel", policy=py_trees.common.ParallelPolicy.SuccessOnAll())
         roaming.add_children([BN_ForwardRandom(aagent), BN_TurnRandom(aagent)])
         
         self.root = pt.composites.Selector(name="Selector", memory=False)
-        self.root.add_children([detection, roaming])
+        self.root.add_children([retreat, detection, roaming])
 
         self.behaviour_tree = pt.trees.BehaviourTree(self.root)
 
