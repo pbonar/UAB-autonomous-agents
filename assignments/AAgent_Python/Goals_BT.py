@@ -572,7 +572,7 @@ class DirectedTurn:
         
 # PHASE 1: ASTRONAUT ALONE
 
-class DetectFlower:
+class DetectFlower: # REDUNDANT
     """
     Returns True if an AlienFlower is detected in the raycast sensors.
     """
@@ -670,9 +670,6 @@ class WalkToFlower:
                     print("✅ New flower added to inventory!")
                     await self.a_agent.send_message("action", "ntm")  # Stop moving
                     return True
-                elif current_count >= 2:
-                    return True
-
                 await asyncio.sleep(0.05)  # Small delay between checks
 
         except asyncio.CancelledError:
@@ -703,29 +700,6 @@ class CollectFlower:
             print(f"Error in CollectFlower: {e}")
             return False
 
-class CheckInventory:
-    """
-    Returns True if the astronaut is carrying 2 or more AlienFlowers.
-    """
-    def __init__(self, a_agent):
-        self.a_agent = a_agent
-        self.i_state = a_agent.i_state
-    
-    async def run(self):
-        try:
-            print("I am checking how many flowers I have")
-            flowers = 0
-            for item in self.i_state.myInventoryList:
-                if item["name"] == "AlienFlower":
-                    flowers = item["amount"]
-                    break
-
-            print(f"Inventory has {flowers} flowers")
-            return flowers >= 2
-
-        except Exception as e:
-            print(f"Error in CheckInventory: {e}")
-            return False
         
 class WalkToBase:
     """

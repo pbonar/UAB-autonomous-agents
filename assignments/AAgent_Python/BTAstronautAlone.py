@@ -200,27 +200,29 @@ class BN_WalkToBase(pt.behaviour.Behaviour):
 class BN_InventoryFull(pt.behaviour.Behaviour):
     def __init__(self, aagent):
         self.my_goal = None
-        # print("Initializing BN_InventoryFull")
         super(BN_InventoryFull, self).__init__("BN_InventoryFull")
         self.my_agent = aagent
 
     def initialise(self):
-        self.my_goal = asyncio.create_task(Goals_BT.CheckInventory(self.my_agent).run())
+        pass  # Don't create a task here
 
     def update(self):
-        if not self.my_goal.done():
-            return pt.common.Status.RUNNING
+        # Perform a direct check without async task
+        flowers = 0
+        for item in self.my_agent.i_state.myInventoryList:
+            if item["name"] == "AlienFlower":
+                flowers = item["amount"]
+                break
+        
+        if flowers >= 2:
+            # print("BN_InventoryFull completed with SUCCESS")
+            return pt.common.Status.SUCCESS
         else:
-            res = self.my_goal.result()
-            if res:
-                print("BN_InventoryFull completed with SUCCESS")
-                return pt.common.Status.SUCCESS
-            else:
-                print("BN_InventoryFull completed with FAILURE")
-                return pt.common.Status.FAILURE
+            # print("BN_InventoryFull completed with FAILURE")
+            return pt.common.Status.FAILURE
 
     def terminate(self, new_status: common.Status):
-        self.my_goal.cancel()  
+        pass  # No task to cancel
  
 
 

@@ -164,7 +164,6 @@ class AAgent:
             "DetectFlower": Goals_BT.DetectFlower(self),
             "WalkToFlower": Goals_BT.WalkToFlower(self),
             "CollectFlower": Goals_BT.CollectFlower(self),
-            "CheckInventoryFull": Goals_BT.CheckInventory(self),
             "WalkToBase": Goals_BT.WalkToBase(self),
             "LeaveFlowers": Goals_BT.LeaveFlowers(self)
         }
