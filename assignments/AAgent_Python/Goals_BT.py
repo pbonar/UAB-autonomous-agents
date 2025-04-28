@@ -908,7 +908,7 @@ class FaceAstronaut:
 
             # Find the astronaut's current position
             for i, obj in enumerate(sensor_obj_info):
-                if obj and obj["tag"] == "AAgentAstronaut":
+                if obj and obj["tag"] == "Astronaut":
                     astronaut_idx = i
                     break
 
@@ -928,43 +928,42 @@ class FaceAstronaut:
 
 class WalkToAstronaut:
     """
-    Moves forward until an astronaut has been hit. //has to be finished//
+    Moves forward until close enough to an astronaut (using sensor distance).
     """
-    def __init__(self, a_agent):
+    def __init__(self, a_agent, detection_distance=0.5):
         self.a_agent = a_agent
-        self.i_state = a_agent.i_state
-
-    def get_flower_count(self):
-        for item in self.i_state.myInventoryList:
-            if item["name"] == "AAgentAstronaut":
-                return item["amount"]
-        return 0
+        self.rc_sensor = a_agent.rc_sensor
+        self.detection_distance = detection_distance  # meters threshold
 
     async def run(self):
         try:
-            start_count = self.get_flower_count()
-            print(f"Starting with {start_count} AlienFlowers in inventory")
+            print(f"🚶 Walking towards Astronaut... stopping if within {self.detection_distance} meters.")
 
             # Start moving forward
             await self.a_agent.send_message("action", "mf")
             await asyncio.sleep(0.05)
 
             while True:
-                current_count = self.get_flower_count()
-                print(f"Current AlienFlowers: {current_count}")
-                
-                if current_count > start_count:
-                    print("✅ New flower added to inventory!")
-                    await self.a_agent.send_message("action", "ntm")  # Stop moving
-                    return True
+                sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
+
+                for obj in sensor_obj_info:
+                    if obj and obj["tag"] == "Astronaut":
+                        distance = obj.get("distance", None)
+                        if distance is not None:
+                            print(f"📡 Detected Astronaut at distance {distance:.2f} meters")
+                            if distance <= self.detection_distance:
+                                print("✅ Close enough to Astronaut! Stopping.")
+                                await self.a_agent.send_message("action", "ntm")  # Stop moving
+                                return True
+
                 await asyncio.sleep(0.1)  # Small delay between checks
 
         except asyncio.CancelledError:
-            print("***** TASK Approach CANCELLED")
+            print("***** TASK WalkToAstronaut CANCELLED")
             await self.a_agent.send_message("action", "ntm")
             return False
 
         except Exception as e:
-            print(f"❌ Error in ApproachAndCollectFlower: {e}")
+            print(f"❌ Error in WalkToAstronaut: {e}")
             await self.a_agent.send_message("action", "ntm")
             return False

@@ -121,7 +121,7 @@ class BN_DetectAstronaut(pt.behaviour.Behaviour):
         sensor_obj_info = self.my_agent.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
         for index, value in enumerate(sensor_obj_info):
             if value:  # there is a hit with an object
-                if value["tag"] == "AAgentAstronaut":  # If it is an Astronaut
+                if value["tag"] == "Astronaut":  # If it is an Astronaut
                     # print("Astronaut detected!")
                     # print("BN_DetectAstronaut completed with SUCCESS")
                     return pt.common.Status.SUCCESS
@@ -187,7 +187,7 @@ class BN_ChaseAstronaut(pt.behaviour.Behaviour):
 
 
 
-class BTCreeter:
+class BTCritter:
     def __init__(self, aagent):
         # py_trees.logging.level = py_trees.logging.Level.DEBUG
 
