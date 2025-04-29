@@ -8,6 +8,7 @@ import Sensors
 import Goals_BT
 import BTRoam
 import BTAstronautAlone
+import BTCritter
 
 import tkinter as tk
 from threading import Thread
@@ -161,17 +162,19 @@ class AAgent:
             "Turn": Goals_BT.Turn(self),
             "RandomRoam": Goals_BT.RandomRoam(self),
             "Avoid": Goals_BT.Avoid(self),
-            "DetectFlower": Goals_BT.DetectFlower(self),
             "WalkToFlower": Goals_BT.WalkToFlower(self),
             "CollectFlower": Goals_BT.CollectFlower(self),
             "WalkToBase": Goals_BT.WalkToBase(self),
-            "LeaveFlowers": Goals_BT.LeaveFlowers(self)
+            "LeaveFlowers": Goals_BT.LeaveFlowers(self),
+            "FaceAstronaut": Goals_BT.FaceAstronaut(self),
+            "WalkToAstronaut": Goals_BT.WalkToAstronaut(self)
         }
 
         # Reference to the possible behaviour trees the agent can execute
         self.bts = {
             "BTRoam": BTRoam.BTRoam(self),
-            "BTAstronautAlone": BTAstronautAlone.BTAstronautAlone(self)
+            "BTAstronautAlone": BTAstronautAlone.BTAstronautAlone(self),
+            "BTCritter": BTCritter.BTCritter(self)
         }
 
         # Active goal

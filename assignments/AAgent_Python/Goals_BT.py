@@ -341,6 +341,7 @@ class RandomRoam:
                 pass
             await self.a_agent.send_message("action", "nt")
 
+
 class Avoid:
     """
     Reliable obstacle avoidance with 30-degree turn increments.
@@ -370,6 +371,7 @@ class Avoid:
         try:
             print("Avoid behavior started - moving forward")
             await self.a_agent.send_message("action", "mf")
+            self.move_start_time = time.time()  # Start moving timer
             
             while True:
                 # Get fresh sensor data every iteration
@@ -377,24 +379,32 @@ class Avoid:
                 obstacle_count, direction = self.count_obstacles(hits, distances)
                 
                 if self.state == self.MOVING:
+                    if time.time() - self.move_start_time > 3.0:
+                        random_direction = random.choice(["tl", "tr"])
+                        random_angle = random.randint(1, 359)  # FULL random angle between 1° and 359°
+                        self.TURN_ANGLE = random_angle  # set the turn angle
+                        print(f"Moving forward >3s: Random turn {random_direction} for {self.TURN_ANGLE} degrees")
+                        await self.initiate_turn(random_direction)
+                        continue  # skip obstacle checking this tick
+
                     if obstacle_count >= self.REQUIRED_HITS:
-                        print(f"Obstacle detected by {obstacle_count} sensors!")
+                        # print(f"Obstacle detected by {obstacle_count} sensors!")
                         await self.initiate_turn(direction)
                 
                 elif self.state == self.TURNING:
                     if await self.update_turn(direction):
                         self.state = self.CHECKING
-                        print("Turn complete, checking path...")
+                        # print("Turn complete, checking path...")
                 
                 elif self.state == self.CHECKING:
                     hits, distances = await self.get_sensor_data()
                     obstacle_count, direction = self.count_obstacles(hits, distances)
                     
                     if obstacle_count < self.REQUIRED_HITS:
-                        print("Path clear - resuming movement")
+                        # print("Path clear - resuming movement")
                         await self.resume_movement()
                     else:
-                        print("Path still blocked - turning more")
+                        # print("Path still blocked - turning more")
                         await self.continue_turn()
                 
                 await asyncio.sleep(0.05)
@@ -413,7 +423,7 @@ class Avoid:
             f"Sensor {i}: {'HIT' if h == 1 else 'clear'} {d:.2f}m"
             for i, (h, d) in enumerate(zip(hits, distances))
         ]
-        print(" | ".join(debug_info))
+        # print(" | ".join(debug_info))
         
         return hits, distances
 
@@ -438,7 +448,7 @@ class Avoid:
         self.turn_start_rot = self.i_state.rotation["y"]
         self.turn_progress = 0
         
-        print(f"Starting {self.turn_direction} turn from {self.turn_start_rot}°")
+        #  {self.turn_direction} turn from {self.turn_start_rot}°")
         await self.a_agent.send_message("action", self.turn_direction)
         self.state = self.TURNING
 
@@ -459,7 +469,7 @@ class Avoid:
                 delta = current_rot - self.turn_start_rot
         
         self.turn_progress = delta
-        print(f"Turn progress: {delta:.1f}°/{self.TURN_ANGLE}°")
+        # print(f"Turn progress: {delta:.1f}°/{self.TURN_ANGLE}°")
         
         if delta >= self.TURN_ANGLE - 2:  # Small tolerance
             await self.a_agent.send_message("action", "nt")
@@ -479,6 +489,7 @@ class Avoid:
         self.turn_direction = None
         await self.a_agent.send_message("action", "mf")
         self.state = self.MOVING
+        self.move_start_time = time.time()  # NEW: reset move timer when moving again
 
     async def cleanup(self):
         """Stop all movements"""
@@ -486,7 +497,6 @@ class Avoid:
             await self.a_agent.send_message("action", "nt")
         await self.a_agent.send_message("action", "stop")
         print("Avoid behavior stopped")
-
 
 # ----------- NEW ASSIGNMENT -----------
 class DirectedTurn:
@@ -506,7 +516,7 @@ class DirectedTurn:
             # Randomly choose turn angle and direction
             turn_angle = 1
 
-            print(f"🔄 Turning {turn_angle} degrees to the {'left' if self.direction == 'tl' else 'right'}")
+            # print(f"🔄 Turning {turn_angle} degrees to the {'left' if self.direction == 'tl' else 'right'}")
             
             # Calculate the target rotation
             if self.direction == "tl":  # Turning left (counter-clockwise)
@@ -514,7 +524,7 @@ class DirectedTurn:
             else:  # Turning right (clockwise)
                 target_rotation = (start_rotation + turn_angle) % 360
 
-            print(f"Target rotation: {target_rotation}")
+            # print(f"Target rotation: {target_rotation}")
 
             # Send turn command
             await self.a_agent.send_message("action", self.direction)
@@ -544,7 +554,7 @@ class DirectedTurn:
                 
                 # Add to total amount turned
                 total_turned += delta
-                print(f"Current: {current_rotation:.2f}, Delta: {delta:.2f}, Total turned: {abs(total_turned):.2f}/{turn_angle}")
+                # print(f"Current: {current_rotation:.2f}, Delta: {delta:.2f}, Total turned: {abs(total_turned):.2f}/{turn_angle}")
                 
                 # Check if we've turned enough (with small tolerance)
                 if abs(total_turned) >= turn_angle - 5:
@@ -557,7 +567,7 @@ class DirectedTurn:
             # Stop turning
             await self.a_agent.send_message("action", "nt")
 
-            print(f"✅ Turn complete! Started at {initial_rotation:.2f}°, ended at {current_rotation:.2f}°, turned {abs(total_turned):.2f}° towards the {'left' if self.direction == 'tl' else 'right'}")
+            # print(f"✅ Turn complete! Started at {initial_rotation:.2f}°, ended at {current_rotation:.2f}°, turned {abs(total_turned):.2f}° towards the {'left' if self.direction == 'tl' else 'right'}")
             await asyncio.sleep(0.05)
             return True
 
@@ -571,29 +581,6 @@ class DirectedTurn:
             return False
         
 # PHASE 1: ASTRONAUT ALONE
-
-class DetectFlower: # REDUNDANT
-    """
-    Returns True if an AlienFlower is detected in the raycast sensors.
-    """
-    def __init__(self, a_agent):
-        self.a_agent = a_agent
-        self.rc_sensor = a_agent.rc_sensor
-
-    async def run(self):
-        try: 
-            sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
-
-            for obj in sensor_obj_info:
-                if obj and obj["tag"] == "AlienFlower":
-                    print("Flower detected")
-                    return True
-            return False
-
-        except Exception as e:
-            print(f"Error in DetectFlower: {e}")
-            return False
-
 class FaceFlower:
     """
     Rotates the astronaut so that it's looking towards the detected flower
@@ -633,7 +620,7 @@ class FaceFlower:
                 return True
 
             direction = self.turn_direction(flower_idx)
-            print(f"🔄 Turning to face flower (from sensor {flower_idx} to 2), direction: {direction}")
+            # print(f"🔄 Turning to face flower (from sensor {flower_idx} to 2), direction: {direction}")
             await DirectedTurn(self.a_agent, direction).run()
             await asyncio.sleep(0.01)
 
@@ -657,20 +644,21 @@ class WalkToFlower:
     async def run(self):
         try:
             start_count = self.get_flower_count()
-            print(f"Starting with {start_count} AlienFlowers in inventory")
+            # print(f"Starting with {start_count} AlienFlowers in inventory")
 
             # Start moving forward
             await self.a_agent.send_message("action", "mf")
+            await asyncio.sleep(0.05)
 
             while True:
                 current_count = self.get_flower_count()
-                print(f"Current AlienFlowers: {current_count}")
+                # print(f"Current AlienFlowers: {current_count}")
                 
                 if current_count > start_count:
                     print("✅ New flower added to inventory!")
                     await self.a_agent.send_message("action", "ntm")  # Stop moving
                     return True
-                await asyncio.sleep(0.05)  # Small delay between checks
+                await asyncio.sleep(0.1)  # Small delay between checks
 
         except asyncio.CancelledError:
             print("***** TASK Approach CANCELLED")
@@ -703,22 +691,32 @@ class CollectFlower:
         
 class WalkToBase:
     """
-    Walks to the Base location to unload flowers.
+    Properly walks to base and verifies arrival using onRoute status
+    with async-friendly checking.
     """
     def __init__(self, a_agent):
         self.a_agent = a_agent
 
     async def run(self):
         try:
-            print("Walking to Base...")
+            print("Initiating base navigation...")
             await self.a_agent.send_message("action", "walk_to,Base")
-            print("Arrived to Base!")
+            
+            # Give initial movement time to start
+            await asyncio.sleep(0.5)
+            
+            # Check every 0.5 seconds until we're no longer on route
+            while self.a_agent.i_state.onRoute:
+                print("Still navigating to base...")
+                await asyncio.sleep(0.5)
+            
+            print("Confirmed arrival at base!")
             return True
-        
+            
         except Exception as e:
-            print(f"Error in WalkToBase {e}")
+            print(f"Base navigation error: {e}")
             return False
-
+        
 class LeaveFlowers:
     """
     Leaves 2 AlienFlowers at the base.
@@ -728,7 +726,7 @@ class LeaveFlowers:
 
     async def run(self):
         try:
-            print("Leaving flowers at the Base...")
+            # print("Leaving flowers at the Base...")
             await self.a_agent.send_message("action", "leave,AlienFlower,2")
             asyncio.sleep(0.5)
             return True
@@ -736,18 +734,91 @@ class LeaveFlowers:
         except Exception as e:
             print(f"Error in LeaveFlowers: {e}")
             return False
+        
+# GOALS UNIQUE TO CRITTERS
+class FaceAstronaut:
+    """
+    Rotates the astronaut so that it's looking towards the detected flower
+    """
+    def __init__(self, a_agent):
+        self.a_agent = a_agent
+        self.rc_sensor = a_agent.rc_sensor
 
-# The tree:
-"""
-1. If inventory full:
-- Go to Base
-- Leave Flowers
-- Keep looking
+    def turn_direction(self, astronaut_idx):
+        """
+        Decide turn direction based on where the flower is relative to sensor index 2 (center).
+        """
+        if astronaut_idx < 2:
+            return "tl"
+        elif astronaut_idx > 2:
+            return "tr"
+        else:
+            return None  # Already centered
 
-2. If flower:
-- Go find the flower
-- Take flower
+    async def run(self):
+        print("I am going to face the astronaut") #del
+        while True:
+            sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
+            astronaut_idx = None
 
-3. If no flower:
-- Keep moving (to find a flower)
-"""
+            # Find the astronaut's current position
+            for i, obj in enumerate(sensor_obj_info):
+                if obj and obj["tag"] == "Astronaut":
+                    astronaut_idx = i
+                    break
+
+            if astronaut_idx is None:
+                print("No astronaut detected")
+                return False
+
+            if astronaut_idx == 2:
+                print("Looking towards astronaut")
+                return True
+
+            direction = self.turn_direction(astronaut_idx)
+            # print(f"🔄 Turning to face flower (from sensor {astronaut_idx} to 2), direction: {direction}")
+            await DirectedTurn(self.a_agent, direction).run()
+            await asyncio.sleep(0.01)
+
+
+class WalkToAstronaut:
+    """
+    Moves forward until close enough to an astronaut (using sensor distance).
+    """
+    def __init__(self, a_agent, detection_distance=0.5):
+        self.a_agent = a_agent
+        self.rc_sensor = a_agent.rc_sensor
+        self.detection_distance = detection_distance  # meters threshold
+
+    async def run(self):
+        try:
+            print(f"🚶 Walking towards Astronaut... stopping if within {self.detection_distance} meters.")
+
+            # Start moving forward
+            await self.a_agent.send_message("action", "mf")
+            await asyncio.sleep(0.05)
+
+            while True:
+                sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
+
+                for obj in sensor_obj_info:
+                    if obj and obj["tag"] == "Astronaut":
+                        distance = obj.get("distance", None)
+                        if distance is not None:
+                            print(f"📡 Detected Astronaut at distance {distance:.2f} meters")
+                            if distance <= self.detection_distance:
+                                print("✅ Close enough to Astronaut! Stopping.")
+                                await self.a_agent.send_message("action", "ntm")  # Stop moving
+                                return True
+
+                await asyncio.sleep(0.1)  # Small delay between checks
+
+        except asyncio.CancelledError:
+            print("***** TASK WalkToAstronaut CANCELLED")
+            await self.a_agent.send_message("action", "ntm")
+            return False
+
+        except Exception as e:
+            print(f"❌ Error in WalkToAstronaut: {e}")
+            await self.a_agent.send_message("action", "ntm")
+            return False

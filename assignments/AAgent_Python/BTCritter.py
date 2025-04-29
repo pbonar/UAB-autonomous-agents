@@ -6,91 +6,6 @@ from py_trees import common
 import Goals_BT
 import Sensors
 
-
-class BN_DoNothing(pt.behaviour.Behaviour):
-    def __init__(self, aagent):
-        self.my_agent = aagent
-        self.my_goal = None
-        # print("Initializing BN_DoNothing")
-        super(BN_DoNothing, self).__init__("BN_DoNothing")
-
-    def initialise(self):
-        self.my_goal = asyncio.create_task(Goals_BT.DoNothing(self.my_agent).run())
-
-    def update(self):
-        if not self.my_goal.done():
-            return pt.common.Status.RUNNING
-        else:
-            if self.my_goal.result():
-                # print("BN_DoNothing completed with SUCCESS")
-                return pt.common.Status.SUCCESS
-            else:
-                # print("BN_DoNothing completed with FAILURE")
-                return pt.common.Status.FAILURE
-
-    def terminate(self, new_status: common.Status):
-        # Finishing the behaviour, therefore we have to stop the associated task
-        self.my_goal.cancel()
-
-
-class BN_ForwardRandom(pt.behaviour.Behaviour):
-    def __init__(self, aagent):
-        self.my_goal = None
-        # print("Initializing BN_ForwardRandom")
-        super(BN_ForwardRandom, self).__init__("BN_ForwardRandom")
-        self.logger.debug("Initializing BN_ForwardRandom")
-        self.my_agent = aagent
-
-    def initialise(self):
-        self.logger.debug("Create Goals_BT.ForwardDist task")
-        self.my_goal = asyncio.create_task(Goals_BT.ForwardDist(self.my_agent, -1, 1, 5).run())
-
-    def update(self):
-        if not self.my_goal.done():
-            return pt.common.Status.RUNNING
-        else:
-            if self.my_goal.result():
-                self.logger.debug("BN_ForwardRandom completed with SUCCESS")
-                # print("BN_ForwardRandom completed with SUCCESS")
-                return pt.common.Status.SUCCESS
-            else:
-                self.logger.debug("BN_ForwardRandom completed with FAILURE")
-                # print("BN_ForwardRandom completed with FAILURE")
-                return pt.common.Status.FAILURE
-
-    def terminate(self, new_status: common.Status):
-        # Finishing the behaviour, therefore we have to stop the associated task
-        self.logger.debug("Terminate BN_ForwardRandom")
-        self.my_goal.cancel()
-
-
-class BN_TurnRandom(pt.behaviour.Behaviour):
-    def __init__(self, aagent):
-        self.my_goal = None
-        # print("Initializing BN_TurnRandom")
-        super(BN_TurnRandom, self).__init__("BN_TurnRandom")
-        self.my_agent = aagent
-
-    def initialise(self):
-        self.my_goal = asyncio.create_task(Goals_BT.Turn(self.my_agent).run())
-
-    def update(self):
-        if not self.my_goal.done():
-            return pt.common.Status.RUNNING
-        else:
-            res = self.my_goal.result()
-            if res:
-                # print("BN_Turn completed with SUCCESS")
-                return pt.common.Status.SUCCESS
-            else:
-                # print("BN_Turn completed with FAILURE")
-                return pt.common.Status.FAILURE
-
-    def terminate(self, new_status: common.Status):
-        # Finishing the behaviour, therefore we have to stop the associated task
-        self.logger.debug("Terminate BN_TurnRandom")
-        self.my_goal.cancel()
-
 # BEHAVIOUR: Agent not doing random moves
 class BN_Avoid(pt.behaviour.Behaviour):
     """Behaviour‐tree node wrapping our Goals_BT.Avoid obstacle‐avoider."""
@@ -191,16 +106,69 @@ class BN_WalkToFlower(pt.behaviour.Behaviour):
     def terminate(self, new_status: common.Status):
         self.my_goal.cancel()
 
-# BEHAVIOUR: Walk to base location
-class BN_WalkToBase(pt.behaviour.Behaviour):
+# BEHAVIOUR: Detect astronaut
+class BN_DetectAstronaut(pt.behaviour.Behaviour):
     def __init__(self, aagent):
         self.my_goal = None
-        # print("Initializing BN_WalkToBase")
-        super(BN_WalkToBase, self).__init__("BN_WalkToBase")
+        # print("Initializing BN_DetectAstronaut")
+        super(BN_DetectAstronaut, self).__init__("BN_DetectAstronaut")
         self.my_agent = aagent
 
     def initialise(self):
-        self.my_goal = asyncio.create_task(Goals_BT.WalkToBase(self.my_agent).run())
+        pass
+
+    def update(self):
+        sensor_obj_info = self.my_agent.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
+        for index, value in enumerate(sensor_obj_info):
+            if value:  # there is a hit with an object
+                if value["tag"] == "Astronaut":  # If it is an Astronaut
+                    # print("Astronaut detected!")
+                    # print("BN_DetectAstronaut completed with SUCCESS")
+                    return pt.common.Status.SUCCESS
+        # print("No Astronaut...")
+        # print("BN_DetectAstronaut completed with FAILURE")
+        return pt.common.Status.FAILURE
+
+    def terminate(self, new_status: common.Status):
+        pass
+
+# BEHAVIOUR: The agent will rotate until it's facing a flower
+class BN_FaceAstronaut(pt.behaviour.Behaviour):
+    def __init__(self, aagent):
+        self.my_goal = None
+        # print("Initializing BN_FaceAstronaut")
+        super(BN_FaceAstronaut, self).__init__("BN_FaceAstronaut")
+        self.my_agent = aagent
+
+    def initialise(self):
+        self.my_goal = asyncio.create_task(Goals_BT.FaceAstronaut(self.my_agent).run())
+
+    def update(self):
+        if not self.my_goal.done():
+            # print("BN_FaceAstronaut completed with RUNNING")
+            return pt.common.Status.RUNNING
+        else:
+            res = self.my_goal.result()
+            if res:
+                print("BN_FaceAstronaut completed with SUCCESS")
+                return pt.common.Status.SUCCESS
+            else:
+                print("BN_FaceAstronaut completed with FAILURE")
+                return pt.common.Status.FAILURE
+
+    def terminate(self, new_status: common.Status):
+        self.my_goal.cancel()  
+
+# BEHAVIOUR: Walk towards the astronaut (Agent has to already be facing the right direction)
+class BN_ChaseAstronaut(pt.behaviour.Behaviour):
+    def __init__(self, aagent):
+        self.my_goal = None
+        # print("Initializing BN_ChaseAstronaut")
+        super(BN_ChaseAstronaut, self).__init__("BN_ChaseAstronaut")
+        self.my_agent = aagent
+
+    def initialise(self):
+        self.my_goal = asyncio.create_task(Goals_BT.WalkToAstronaut(self.my_agent).run())
 
     def update(self):
         if not self.my_goal.done():
@@ -208,81 +176,27 @@ class BN_WalkToBase(pt.behaviour.Behaviour):
         else:
             res = self.my_goal.result()
             if res:
-                print("BN_WalkToBase completed with SUCCESS")
+                print("BN_ChaseAstronaut completed with SUCCESS")
                 return pt.common.Status.SUCCESS
             else:
-                print("BN_WalkToBase completed with FAILURE")
+                print("BN_ChaseAstronaut completed with FAILURE")
                 return pt.common.Status.FAILURE
 
     def terminate(self, new_status: common.Status):
-        self.my_goal.cancel()   
-
-# BEHAVIOUR: Check if inventory is full so that we know when to go back to base
-class BN_InventoryFull(pt.behaviour.Behaviour):
-    def __init__(self, aagent):
-        self.my_goal = None
-        super(BN_InventoryFull, self).__init__("BN_InventoryFull")
-        self.my_agent = aagent
-
-    def initialise(self):
-        pass  # Don't create a task here
-
-    def update(self):
-        # Perform a direct check without async task
-        flowers = 0
-        for item in self.my_agent.i_state.myInventoryList:
-            if item["name"] == "AlienFlower":
-                flowers = item["amount"]
-                break
-        
-        if flowers >= 2:
-            # print("BN_InventoryFull completed with SUCCESS")
-            return pt.common.Status.SUCCESS
-        else:
-            # print("BN_InventoryFull completed with FAILURE")
-            return pt.common.Status.FAILURE
-
-    def terminate(self, new_status: common.Status):
-        pass  # No task to cancel
- 
- # BEHAVIOUR: Check if inventory is full so that we know when to go back to base
-class BN_LeaveFlowers(pt.behaviour.Behaviour):
-    def __init__(self, aagent):
-        self.my_goal = None
-        super(BN_LeaveFlowers, self).__init__("BN_LeaveFlowers")
-        self.my_agent = aagent
-
-    def initialise(self):
-        self.my_goal = asyncio.create_task(Goals_BT.LeaveFlowers(self.my_agent).run())
-
-    def update(self):
-        if not self.my_goal.done():
-            return pt.common.Status.RUNNING
-        else:
-            res = self.my_goal.result()
-            if res:
-                print("BN_WalkToBase completed with SUCCESS")
-                return pt.common.Status.SUCCESS
-            else:
-                print("BN_WalkToBase completed with FAILURE")
-                return pt.common.Status.FAILURE
-
-    def terminate(self, new_status: common.Status):
-        self.my_goal.cancel()   
+        self.my_goal.cancel()
 
 
 
-class BTAstronautAlone:
+class BTCritter:
     def __init__(self, aagent):
         # py_trees.logging.level = py_trees.logging.Level.DEBUG
 
         self.aagent = aagent
 
         # FINAL VERSION
-
-        # Back to base logic
-        retreat = pt.composites.Sequence(name="GoToBase", memory=True)
-        retreat.add_children([BN_InventoryFull(aagent), BN_WalkToBase(aagent), BN_LeaveFlowers(aagent)])
+        # Gather flower logic
+        chase = pt.composites.Sequence(name="DetectFlower", memory=True)
+        chase.add_children([BN_DetectAstronaut(aagent), BN_FaceAstronaut(aagent), BN_ChaseAstronaut(aagent)])
 
         # Gather flower logic
         detection = pt.composites.Sequence(name="DetectFlower", memory=True)
@@ -295,7 +209,7 @@ class BTAstronautAlone:
         roaming.add_child(BN_Avoid(aagent))
         
         self.root = pt.composites.Selector(name="Selector", memory=False)
-        self.root.add_children([retreat, detection, roaming])
+        self.root.add_children([chase, detection, roaming])
 
         self.behaviour_tree = pt.trees.BehaviourTree(self.root)
 
