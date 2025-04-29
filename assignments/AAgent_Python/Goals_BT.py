@@ -388,23 +388,23 @@ class Avoid:
                         continue  # skip obstacle checking this tick
 
                     if obstacle_count >= self.REQUIRED_HITS:
-                        print(f"Obstacle detected by {obstacle_count} sensors!")
+                        # print(f"Obstacle detected by {obstacle_count} sensors!")
                         await self.initiate_turn(direction)
                 
                 elif self.state == self.TURNING:
                     if await self.update_turn(direction):
                         self.state = self.CHECKING
-                        print("Turn complete, checking path...")
+                        # print("Turn complete, checking path...")
                 
                 elif self.state == self.CHECKING:
                     hits, distances = await self.get_sensor_data()
                     obstacle_count, direction = self.count_obstacles(hits, distances)
                     
                     if obstacle_count < self.REQUIRED_HITS:
-                        print("Path clear - resuming movement")
+                        # print("Path clear - resuming movement")
                         await self.resume_movement()
                     else:
-                        print("Path still blocked - turning more")
+                        # print("Path still blocked - turning more")
                         await self.continue_turn()
                 
                 await asyncio.sleep(0.05)
@@ -423,7 +423,7 @@ class Avoid:
             f"Sensor {i}: {'HIT' if h == 1 else 'clear'} {d:.2f}m"
             for i, (h, d) in enumerate(zip(hits, distances))
         ]
-        print(" | ".join(debug_info))
+        # print(" | ".join(debug_info))
         
         return hits, distances
 
@@ -448,7 +448,7 @@ class Avoid:
         self.turn_start_rot = self.i_state.rotation["y"]
         self.turn_progress = 0
         
-        print(f"Starting {self.turn_direction} turn from {self.turn_start_rot}°")
+        #  {self.turn_direction} turn from {self.turn_start_rot}°")
         await self.a_agent.send_message("action", self.turn_direction)
         self.state = self.TURNING
 
@@ -469,7 +469,7 @@ class Avoid:
                 delta = current_rot - self.turn_start_rot
         
         self.turn_progress = delta
-        print(f"Turn progress: {delta:.1f}°/{self.TURN_ANGLE}°")
+        # print(f"Turn progress: {delta:.1f}°/{self.TURN_ANGLE}°")
         
         if delta >= self.TURN_ANGLE - 2:  # Small tolerance
             await self.a_agent.send_message("action", "nt")
@@ -498,152 +498,6 @@ class Avoid:
         await self.a_agent.send_message("action", "stop")
         print("Avoid behavior stopped")
 
-    """
-    Reliable obstacle avoidance with 30-degree turn increments.
-    Turns until path is clear, with proper sensor checks between turns.
-    """
-    MOVING = 0
-    TURNING = 1
-    CHECKING = 2
-
-    def __init__(self, a_agent):
-        self.a_agent = a_agent
-        self.rc_sensor = a_agent.rc_sensor
-        self.i_state = a_agent.i_state
-        self.state = self.MOVING
-        
-        # Configuration
-        self.TURN_ANGLE = 30  # degrees per turn
-        self.MIN_DISTANCE = 2  # meters to object
-        self.REQUIRED_HITS = 1   # min sensors detecting obstacle
-        
-        # Turn tracking
-        self.turn_start_rot = 0
-        self.turn_direction = None
-        self.turn_progress = 0
-
-    async def run(self):
-        try:
-            print("Avoid behavior started - moving forward")
-            await self.a_agent.send_message("action", "mf")
-            
-            while True:
-                # Get fresh sensor data every iteration
-                hits, distances = await self.get_sensor_data()
-                obstacle_count, direction = self.count_obstacles(hits, distances)
-                
-                if self.state == self.MOVING:
-                    if obstacle_count >= self.REQUIRED_HITS:
-                        print(f"Obstacle detected by {obstacle_count} sensors!")
-                        await self.initiate_turn(direction)
-                
-                elif self.state == self.TURNING:
-                    if await self.update_turn(direction):
-                        self.state = self.CHECKING
-                        print("Turn complete, checking path...")
-                
-                elif self.state == self.CHECKING:
-                    hits, distances = await self.get_sensor_data()
-                    obstacle_count, direction = self.count_obstacles(hits, distances)
-                    
-                    if obstacle_count < self.REQUIRED_HITS:
-                        print("Path clear - resuming movement")
-                        await self.resume_movement()
-                    else:
-                        print("Path still blocked - turning more")
-                        await self.continue_turn()
-                
-                await asyncio.sleep(0.05)
-                
-        except Exception as e:
-            print(f"Avoid error: {e}")
-            await self.cleanup()
-
-    async def get_sensor_data(self):
-        """Return fresh sensor data with debug info"""
-        hits = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.HIT]
-        distances = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.DISTANCE]
-        
-        # Debug print sensor data
-        debug_info = [
-            f"Sensor {i}: {'HIT' if h == 1 else 'clear'} {d:.2f}m"
-            for i, (h, d) in enumerate(zip(hits, distances))
-        ]
-        print(" | ".join(debug_info))
-        
-        return hits, distances
-
-    def count_obstacles(self, hits, distances):
-        """
-            This serves two purposes:
-                - Counting sensors detecting obstacles within min distance
-                - Deciding what direction it should turn
-        """
-        count = sum(
-            1 for h, d in zip(hits, distances)
-            if h == 1 and d is not None and d < self.MIN_DISTANCE
-            )
-        if (hits[0] != 0) or (hits[1] != 0): direction = "tr"
-        else: direction = "tl"
-        return count, direction
-
-    async def initiate_turn(self, direction):
-        """Start a new turn sequence"""
-        await self.a_agent.send_message("action", "stop")
-        self.turn_direction = direction
-        self.turn_start_rot = self.i_state.rotation["y"]
-        self.turn_progress = 0
-        
-        print(f"Starting {self.turn_direction} turn from {self.turn_start_rot}°")
-        await self.a_agent.send_message("action", self.turn_direction)
-        self.state = self.TURNING
-
-    async def update_turn(self, direction):
-        """Update turn progress and return True when complete"""
-        current_rot = self.i_state.rotation["y"]
-        
-        # Calculate turn progress
-        if direction == "tl":  # Left turn
-            if current_rot > self.turn_start_rot:  # Crossed 0°
-                delta = (360 - current_rot) + self.turn_start_rot
-            else:
-                delta = self.turn_start_rot - current_rot
-        else:  # Right turn
-            if current_rot < self.turn_start_rot:  # Crossed 360°
-                delta = (360 - self.turn_start_rot) + current_rot
-            else:
-                delta = current_rot - self.turn_start_rot
-        
-        self.turn_progress = delta
-        print(f"Turn progress: {delta:.1f}°/{self.TURN_ANGLE}°")
-        
-        if delta >= self.TURN_ANGLE - 2:  # Small tolerance
-            await self.a_agent.send_message("action", "nt")
-            return True
-        return False
-
-    async def continue_turn(self):
-        """Continue turning in same direction"""
-        self.turn_start_rot = self.i_state.rotation["y"]
-        self.turn_progress = 0
-        await self.a_agent.send_message("action", self.turn_direction)
-        self.state = self.TURNING
-        print(f"Continuing {self.turn_direction} turn")
-
-    async def resume_movement(self):
-        """Resume forward movement"""
-        self.turn_direction = None
-        await self.a_agent.send_message("action", "mf")
-        self.state = self.MOVING
-
-    async def cleanup(self):
-        """Stop all movements"""
-        if self.state == self.TURNING:
-            await self.a_agent.send_message("action", "nt")
-        await self.a_agent.send_message("action", "stop")
-        print("Avoid behavior stopped")
-
-
 # ----------- NEW ASSIGNMENT -----------
 class DirectedTurn:
     """
@@ -662,7 +516,7 @@ class DirectedTurn:
             # Randomly choose turn angle and direction
             turn_angle = 1
 
-            print(f"🔄 Turning {turn_angle} degrees to the {'left' if self.direction == 'tl' else 'right'}")
+            # print(f"🔄 Turning {turn_angle} degrees to the {'left' if self.direction == 'tl' else 'right'}")
             
             # Calculate the target rotation
             if self.direction == "tl":  # Turning left (counter-clockwise)
@@ -670,7 +524,7 @@ class DirectedTurn:
             else:  # Turning right (clockwise)
                 target_rotation = (start_rotation + turn_angle) % 360
 
-            print(f"Target rotation: {target_rotation}")
+            # print(f"Target rotation: {target_rotation}")
 
             # Send turn command
             await self.a_agent.send_message("action", self.direction)
@@ -700,7 +554,7 @@ class DirectedTurn:
                 
                 # Add to total amount turned
                 total_turned += delta
-                print(f"Current: {current_rotation:.2f}, Delta: {delta:.2f}, Total turned: {abs(total_turned):.2f}/{turn_angle}")
+                # print(f"Current: {current_rotation:.2f}, Delta: {delta:.2f}, Total turned: {abs(total_turned):.2f}/{turn_angle}")
                 
                 # Check if we've turned enough (with small tolerance)
                 if abs(total_turned) >= turn_angle - 5:
@@ -713,7 +567,7 @@ class DirectedTurn:
             # Stop turning
             await self.a_agent.send_message("action", "nt")
 
-            print(f"✅ Turn complete! Started at {initial_rotation:.2f}°, ended at {current_rotation:.2f}°, turned {abs(total_turned):.2f}° towards the {'left' if self.direction == 'tl' else 'right'}")
+            # print(f"✅ Turn complete! Started at {initial_rotation:.2f}°, ended at {current_rotation:.2f}°, turned {abs(total_turned):.2f}° towards the {'left' if self.direction == 'tl' else 'right'}")
             await asyncio.sleep(0.05)
             return True
 
@@ -766,7 +620,7 @@ class FaceFlower:
                 return True
 
             direction = self.turn_direction(flower_idx)
-            print(f"🔄 Turning to face flower (from sensor {flower_idx} to 2), direction: {direction}")
+            # print(f"🔄 Turning to face flower (from sensor {flower_idx} to 2), direction: {direction}")
             await DirectedTurn(self.a_agent, direction).run()
             await asyncio.sleep(0.01)
 
@@ -790,7 +644,7 @@ class WalkToFlower:
     async def run(self):
         try:
             start_count = self.get_flower_count()
-            print(f"Starting with {start_count} AlienFlowers in inventory")
+            # print(f"Starting with {start_count} AlienFlowers in inventory")
 
             # Start moving forward
             await self.a_agent.send_message("action", "mf")
@@ -798,7 +652,7 @@ class WalkToFlower:
 
             while True:
                 current_count = self.get_flower_count()
-                print(f"Current AlienFlowers: {current_count}")
+                # print(f"Current AlienFlowers: {current_count}")
                 
                 if current_count > start_count:
                     print("✅ New flower added to inventory!")
@@ -872,7 +726,7 @@ class LeaveFlowers:
 
     async def run(self):
         try:
-            print("Leaving flowers at the Base...")
+            # print("Leaving flowers at the Base...")
             await self.a_agent.send_message("action", "leave,AlienFlower,2")
             asyncio.sleep(0.5)
             return True
@@ -902,6 +756,7 @@ class FaceAstronaut:
             return None  # Already centered
 
     async def run(self):
+        print("I am going to face the astronaut") #del
         while True:
             sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
             astronaut_idx = None
@@ -921,7 +776,7 @@ class FaceAstronaut:
                 return True
 
             direction = self.turn_direction(astronaut_idx)
-            print(f"🔄 Turning to face flower (from sensor {astronaut_idx} to 2), direction: {direction}")
+            # print(f"🔄 Turning to face flower (from sensor {astronaut_idx} to 2), direction: {direction}")
             await DirectedTurn(self.a_agent, direction).run()
             await asyncio.sleep(0.01)
 
