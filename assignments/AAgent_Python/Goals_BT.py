@@ -392,7 +392,7 @@ class Avoid:
                         await self.initiate_turn(direction)
                 
                 elif self.state == self.TURNING:
-                    if await self.update_turn(direction):
+                    if await self.update_turn():
                         self.state = self.CHECKING
                         # print("Turn complete, checking path...")
                 
@@ -452,9 +452,10 @@ class Avoid:
         await self.a_agent.send_message("action", self.turn_direction)
         self.state = self.TURNING
 
-    async def update_turn(self, direction):
+    async def update_turn(self):
         """Update turn progress and return True when complete"""
         current_rot = self.i_state.rotation["y"]
+        direction = self.turn_direction
         
         # Calculate turn progress
         if direction == "tl":  # Left turn
@@ -623,8 +624,6 @@ class FaceFlower:
             # print(f"🔄 Turning to face flower (from sensor {flower_idx} to 2), direction: {direction}")
             await DirectedTurn(self.a_agent, direction).run()
             await asyncio.sleep(0.01)
-
-            
 
 
 class WalkToFlower:
@@ -810,8 +809,9 @@ class WalkToAstronaut:
                                 print("✅ Close enough to Astronaut! Stopping.")
                                 await self.a_agent.send_message("action", "ntm")  # Stop moving
                                 return True
-
-                await asyncio.sleep(0.1)  # Small delay between checks
+                
+                print("Lost contact with Astronaut...")
+                return False
 
         except asyncio.CancelledError:
             print("***** TASK WalkToAstronaut CANCELLED")
