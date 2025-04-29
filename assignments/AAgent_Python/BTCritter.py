@@ -123,7 +123,7 @@ class BN_DetectAstronaut(pt.behaviour.Behaviour):
             if value:  # there is a hit with an object
                 if value["tag"] == "Astronaut":  # If it is an Astronaut
                     # print("Astronaut detected!")
-                    # print("BN_DetectAstronaut completed with SUCCESS")
+                    print("BN_DetectAstronaut completed with SUCCESS")
                     return pt.common.Status.SUCCESS
         # print("No Astronaut...")
         # print("BN_DetectAstronaut completed with FAILURE")
@@ -139,6 +139,7 @@ class BN_FaceAstronaut(pt.behaviour.Behaviour):
         # print("Initializing BN_FaceAstronaut")
         super(BN_FaceAstronaut, self).__init__("BN_FaceAstronaut")
         self.my_agent = aagent
+        self.last_astronaut_idx = None
 
     def initialise(self):
         self.my_goal = asyncio.create_task(Goals_BT.FaceAstronaut(self.my_agent).run())
@@ -194,7 +195,7 @@ class BTCritter:
         self.aagent = aagent
 
         # FINAL VERSION
-        # Gather flower logic
+        # Chase astronaut logic
         chase = pt.composites.Sequence(name="DetectFlower", memory=True)
         chase.add_children([BN_DetectAstronaut(aagent), BN_FaceAstronaut(aagent), BN_ChaseAstronaut(aagent)])
 
@@ -209,7 +210,7 @@ class BTCritter:
         roaming.add_child(BN_Avoid(aagent))
         
         self.root = pt.composites.Selector(name="Selector", memory=False)
-        self.root.add_children([chase, detection, roaming])
+        self.root.add_children([chase, roaming]) # Detection not on the tree for the time being
 
         self.behaviour_tree = pt.trees.BehaviourTree(self.root)
 
