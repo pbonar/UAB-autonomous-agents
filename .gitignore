@@ -1,9 +1,9 @@
 assignments/drone-aape/agent/NOTES.txt
 assignments/drone-aape/agent/__pycache__
 assignments/drone-aape/agent/myenv
-assignments/drone-aape/uab-agents-simulator.app
+assignments/drone-aape/uab-agents-simulator-0.2.0.app
 .DS_Store
 exam1_notes.docx
-AAgent_Python/__pycache__
-AAgent_Python/uab-agents-simulator.app
-AAgent_Python/agent/NOTES.txt
+assignments/AAgent_Python/__pycache__
+assignments/AAgent_Python/uab-agents-simulator-0.3.0.app
+assignments/AAgent_Python/NOTES.txt
