@@ -1,7 +1,7 @@
 import sys
 from collections import deque
 
-import aiohttp
+import aiohttp # type: ignore
 import asyncio
 import json
 import Sensors
@@ -167,9 +167,9 @@ class AAgent:
             "WalkToBase": Goals_BT.WalkToBase(self),
             "LeaveFlowers": Goals_BT.LeaveFlowers(self),
             "FaceAstronaut": Goals_BT.FaceAstronaut(self),
-            "WalkToAstronaut": Goals_BT.WalkToAstronaut(self)
+            "WalkToAstronaut": Goals_BT.WalkToAstronaut(self),
+            "EvadeCritter": Goals_BT.EvadeCritter(self)
         }
-
         # Reference to the possible behaviour trees the agent can execute
         self.bts = {
             "BTRoam": BTRoam.BTRoam(self),

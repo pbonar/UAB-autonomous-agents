@@ -5,6 +5,7 @@ import py_trees as pt
 from py_trees import common
 import Goals_BT
 import Sensors
+import time
 
 
 class BN_DoNothing(pt.behaviour.Behaviour):
@@ -151,7 +152,7 @@ class BN_FaceFlower(pt.behaviour.Behaviour):
 
     def update(self):
         if not self.my_goal.done():
-            # print("BN_FaceFlower completed with RUNNING")
+            # print("BN_FaceFlower completed with RUNNING")
             return pt.common.Status.RUNNING
         else:
             res = self.my_goal.result()
@@ -244,7 +245,8 @@ class BN_InventoryFull(pt.behaviour.Behaviour):
 
     def terminate(self, new_status: common.Status):
         pass  # No task to cancel
- 
+
+
  # BEHAVIOUR: Check if inventory is full so that we know when to go back to base
 class BN_LeaveFlowers(pt.behaviour.Behaviour):
     def __init__(self, aagent):
@@ -272,6 +274,46 @@ class BN_LeaveFlowers(pt.behaviour.Behaviour):
 
 
 
+class BN_DetectCritter(pt.behaviour.Behaviour):
+    def __init__(self, aagent):
+        self.my_goal = None
+        super(BN_DetectCritter, self).__init__("BN_DetectCritter")
+        self.my_agent = aagent
+
+    def initialise(self):
+        pass
+
+    def update(self):
+        sensor_obj_info = self.my_agent.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
+        for index, value in enumerate(sensor_obj_info):
+            if value:  # there is a hit with an object
+                if value["tag"] == "AAgentCritterMantaRay":  # Detect critter
+                    return pt.common.Status.SUCCESS
+        return pt.common.Status.FAILURE
+
+    def terminate(self, new_status: pt.common.Status):
+        pass
+
+# BN for the EvadeCritter Goal
+class BN_EvadeCritter(pt.behaviour.Behaviour):
+    def __init__(self, aagent):
+        super().__init__("BN_EvadeCritter")
+        self.my_agent = aagent
+        self.task = None
+
+    def initialise(self):
+        self.task = asyncio.create_task(Goals_BT.EvadeCritter(self.my_agent).run())
+
+    def update(self):
+        if not self.task.done():
+            return pt.common.Status.RUNNING
+        return pt.common.Status.SUCCESS if self.task.result() else pt.common.Status.FAILURE
+
+    def terminate(self, new_status):
+        if self.task and not self.task.done():
+            self.task.cancel()
+
+
 class BTAstronautAlone:
     def __init__(self, aagent):
         # py_trees.logging.level = py_trees.logging.Level.DEBUG
@@ -279,6 +321,9 @@ class BTAstronautAlone:
         self.aagent = aagent
 
         # FINAL VERSION
+        # Evade Critter logic
+        evade = pt.composites.Sequence(name="EvadeCritter", memory=True)
+        evade.add_children([BN_DetectCritter(aagent), BN_EvadeCritter(aagent)])
 
         # Back to base logic
         retreat = pt.composites.Sequence(name="GoToBase", memory=True)
@@ -289,13 +334,20 @@ class BTAstronautAlone:
         detection.add_children([BN_DetectFlower(aagent), BN_FaceFlower(aagent), BN_WalkToFlower(aagent)])
 
         # Roaming logic
-        # roaming = pt.composites.Parallel("Parallel", policy=py_trees.common.ParallelPolicy.SuccessOnAll())
-        # roaming.add_children([BN_ForwardRandom(aagent), BN_TurnRandom(aagent)])
         roaming = pt.composites.Sequence(name="Roaming", memory=False)
         roaming.add_child(BN_Avoid(aagent))
+
+        # Critter Avoidance Logic
+        detectCritter = pt.composites.Sequence(name="DetectCritter", memory=True)
+        # TO DO : ADD MORE Behavior nodes for agent to escape from critter (E.g. turn away, walk away etc)
+        # Then add it into the children below
+        detectCritter.add_children([BN_DetectCritter(aagent)])
+        
+        # Critter Bite Logic
+        # bitten = BN_HandleBite(aagent)
         
         self.root = pt.composites.Selector(name="Selector", memory=False)
-        self.root.add_children([retreat, detection, roaming])
+        self.root.add_children([evade, retreat, detection, roaming, detectCritter])
 
         self.behaviour_tree = pt.trees.BehaviourTree(self.root)
 

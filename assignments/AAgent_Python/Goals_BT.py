@@ -11,7 +11,6 @@ def calculate_distance(point_a, point_b):
                          (point_b['z'] - point_a['z']) ** 2)
     return distance
 
-
 class DoNothing:
     """
     Does nothing
@@ -775,50 +774,196 @@ class FaceAstronaut:
                 return True
 
             direction = self.turn_direction(astronaut_idx)
+            await self.a_agent.send_message("action", "ntm")
             # print(f"🔄 Turning to face flower (from sensor {astronaut_idx} to 2), direction: {direction}")
             await DirectedTurn(self.a_agent, direction).run()
             await asyncio.sleep(0.01)
 
 
 class WalkToAstronaut:
-    """
-    Moves forward until close enough to an astronaut (using sensor distance).
-    """
-    def __init__(self, a_agent, detection_distance=0.5):
+    def __init__(self, a_agent, touch_threshold=0.6):
         self.a_agent = a_agent
         self.rc_sensor = a_agent.rc_sensor
-        self.detection_distance = detection_distance  # meters threshold
+        self.touch_threshold = touch_threshold  # Almost touching (5 cm)
+        self.min_distance = float('inf')       # Track closest distance
+
+    async def run(self):
+        print(f"🚶 Walking until astronaut is within {self.touch_threshold}m...")
+        await self.a_agent.send_message("action", "mf")  # Move forward
+
+        while True:
+            sensor_data = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
+            astronaut_detected = False
+
+            for obj in sensor_data:
+                if obj and obj["tag"] == "Astronaut":
+                    distance = obj.get("distance", None)
+                    if distance is not None:
+                        print(f"📡 Distance: {distance:.3f}m")
+                        astronaut_detected = True
+                        self.min_distance = min(self.min_distance, distance)
+
+                        # Case 1: Definitely touching
+                        if distance <= self.touch_threshold:
+                            print("✅ Astronaut touched!")
+                            await self.a_agent.send_message("action", "ntm")
+                            return True
+
+                        # Case 2: Not moving closer (likely stuck/colliding)
+                        elif (distance >= self.min_distance - 0.2) and (self.min_distance < 0.3):  # Tiny buffer
+                            print("⚠️ Distance not decreasing. Assuming collision.")
+                            await self.a_agent.send_message("action", "ntm")
+                            return True
+
+            # Case 3: Astronaut lost (sensor missed it at close range)
+            if not astronaut_detected and self.min_distance < 0.5:
+                print("⚠️ Astronaut lost at close range. Assuming touch.")
+                await self.a_agent.send_message("action", "ntm")
+                return True
+
+            await asyncio.sleep(0.1)  # Avoid busy-waiting
+        
+class Retreat:
+    """
+    Turns and leaves after biting an astronaut
+    """
+    def __init__(self, a_agent):
+        self.a_agent = a_agent
+        self.rc_sensor = a_agent.rc_sensor
 
     async def run(self):
         try:
-            print(f"🚶 Walking towards Astronaut... stopping if within {self.detection_distance} meters.")
-
-            # Start moving forward
-            await self.a_agent.send_message("action", "mf")
-            await asyncio.sleep(0.05)
-
-            while True:
-                sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
-
-                for obj in sensor_obj_info:
-                    if obj and obj["tag"] == "Astronaut":
-                        distance = obj.get("distance", None)
-                        if distance is not None:
-                            print(f"📡 Detected Astronaut at distance {distance:.2f} meters")
-                            if distance <= self.detection_distance:
-                                print("✅ Close enough to Astronaut! Stopping.")
-                                await self.a_agent.send_message("action", "ntm")  # Stop moving
-                                return True
-                
-                print("Lost contact with Astronaut...")
-                return False
-
-        except asyncio.CancelledError:
-            print("***** TASK WalkToAstronaut CANCELLED")
             await self.a_agent.send_message("action", "ntm")
-            return False
+            await self.a_agent.send_message("action", "tr")
+            await asyncio.sleep(1.8)  # Tiempo aproximado para giro de 180°
+            await self.a_agent.send_message("action", "nt")
+            await self.a_agent.send_message("action", "mf")
+            await asyncio.sleep(1)
+            await self.a_agent.send_message("action", "ntm")
+            print("✅ Retreat complete!")
+            return True
 
         except Exception as e:
-            print(f"❌ Error in WalkToAstronaut: {e}")
+            print(f"❌ Error in Retreat: {e}")
             await self.a_agent.send_message("action", "ntm")
             return False
+
+
+
+# GOALS FOR AVOIDING CRITTERS
+"""class AvoidCritter:
+    
+    When a critter has been detected, runs away by moving backwards.
+    
+    def __init__(self, a_agent):
+        self.a_agent = a_agent
+        self.rc_sensor = a_agent.rc_sensor
+        self.i_state = a_agent.i_state
+        self.state = None
+
+    async def run(self):
+        try:
+            print("AvoidCritter behavior started - checking for critters...")
+
+            # while True:
+            #     # Check if a critter is detected
+            #     sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
+            #     critter_detected = False
+
+            #     for obj in sensor_obj_info:
+            #         if obj and obj["tag"] == "AAgentCritterMantaRay":  # If critter is detected
+            #             critter_detected = True
+            #             break
+
+            #     if critter_detected:
+            print("Critter detected! Moving backwards to avoid...")
+
+            # Move backwards until the critter is no longer detected
+            await self.a_agent.send_message("action", "mb")  # Move backward command
+            while critter_detected:
+                # Check again if critter is still present
+                sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
+                critter_detected = False
+                for obj in sensor_obj_info:
+                    if obj and obj["tag"] == "AAgentCritterMantaRay":
+                        critter_detected = True
+                        await asyncio.sleep(0.1)  # Small delay before checking again
+
+                else:
+                    print("No more critter detected! Stopping.")
+                    await self.a_agent.send_message("action", "ntm")  # Stop moving
+                    return True
+
+            else:
+                print("No critter detected, continuing regular behavior...")
+                return False
+
+        except Exception as e:
+            print(f"Error in AvoidCritter: {e}")
+            await self.a_agent.send_message("action", "ntm")  # Stop if there's an error
+            return False"""
+
+class EvadeCritter:
+    """
+    Estrategia mejorada para evadir critters:
+    1. Detects the direction of the critter
+    2. Turns 180º on the opposite direction
+    3. Runs
+    4. Evasive movements
+    """
+    def __init__(self, a_agent):
+        self.a_agent = a_agent
+        self.rc_sensor = a_agent.rc_sensor
+        self.evade_time = 3  # segundos de huida
+        self.evade_start_time = 0
+
+    async def run(self):
+        try:
+            # Detectar posición del critter
+            critter_idx = self._detect_critter_position()
+            if critter_idx is None:
+                return False
+
+            print(f"Critter detected at sensor {critter_idx}! Initiating evasion...")
+            
+            # Paso 1: Giro rápido (180°)
+            await self._turn_away(critter_idx)
+            
+            # Paso 2: Huida con movimiento evasivo
+            self.evade_start_time = time.time()
+            while time.time() - self.evade_start_time < self.evade_time:
+                await self._evasive_maneuver()
+                await asyncio.sleep(0.1)
+            
+            await self.a_agent.send_message("action", "ntm")
+            return True
+            
+        except Exception as e:
+            print(f"Error in EvadeCritter: {e}")
+            await self.a_agent.send_message("action", "ntm")
+            return False
+
+    def _detect_critter_position(self):
+        sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
+        for i, obj in enumerate(sensor_obj_info):
+            if obj and obj["tag"] == "AAgentCritterMantaRay":
+                return i
+        return None
+
+    async def _turn_away(self, critter_idx):
+        """Gira 180° en dirección opuesta al critter"""
+        turn_direction = "tr" if critter_idx < 2 else "tl"  # Giro opuesto
+        
+        print(f"Turning away from critter (180° {turn_direction})")
+        await self.a_agent.send_message("action", f"{turn_direction},0.5")
+        await asyncio.sleep(1.8)  # Tiempo aproximado para giro de 180°
+        await self.a_agent.send_message("action", "nt")
+
+    async def _evasive_maneuver(self):
+        """Movimiento evasivo en zig-zag"""
+        # Movimiento principal hacia adelante
+        await self.a_agent.send_message("action", "mf,1.0")
+        
+        # Movimiento lateral aleatorio
+        zigzag = random.choice(["tl,0.3", "tr,0.3"])
+        await self.a_agent.send_message("action", zigzag)

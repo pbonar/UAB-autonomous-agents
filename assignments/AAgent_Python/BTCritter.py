@@ -186,6 +186,31 @@ class BN_ChaseAstronaut(pt.behaviour.Behaviour):
     def terminate(self, new_status: common.Status):
         self.my_goal.cancel()
 
+class BN_Retreat(pt.behaviour.Behaviour):
+    def __init__(self, aagent):
+        self.my_goal = None
+        # print("Initializing BN_Retreat")
+        super(BN_Retreat, self).__init__("BN_Retreat")
+        self.my_agent = aagent
+
+    def initialise(self):
+        self.my_goal = asyncio.create_task(Goals_BT.Retreat(self.my_agent).run())
+
+    def update(self):
+        if not self.my_goal.done():
+            return pt.common.Status.RUNNING
+        else:
+            res = self.my_goal.result()
+            if res:
+                print("BN_Retreat completed with SUCCESS")
+                return pt.common.Status.SUCCESS
+            else:
+                print("BN_Retreat completed with FAILURE") # Cannot Fail
+                return pt.common.Status.FAILURE
+
+    def terminate(self, new_status: common.Status):
+        self.my_goal.cancel()
+
 
 
 class BTCritter:
@@ -197,7 +222,7 @@ class BTCritter:
         # FINAL VERSION
         # Chase astronaut logic
         chase = pt.composites.Sequence(name="DetectFlower", memory=True)
-        chase.add_children([BN_DetectAstronaut(aagent), BN_FaceAstronaut(aagent), BN_ChaseAstronaut(aagent)])
+        chase.add_children([BN_DetectAstronaut(aagent), BN_FaceAstronaut(aagent), BN_ChaseAstronaut(aagent), BN_Retreat(aagent)])
 
         # Gather flower logic
         detection = pt.composites.Sequence(name="DetectFlower", memory=True)
