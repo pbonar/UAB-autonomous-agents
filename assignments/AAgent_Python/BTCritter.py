@@ -6,16 +6,19 @@ from py_trees import common
 import Goals_BT
 import Sensors
 
-# BEHAVIOUR: Agent not doing random moves
+# ===========================
+# BEHAVIOUR: Agent will avoid obstacles
+# ===========================
 class BN_Avoid(pt.behaviour.Behaviour):
-    """Behaviour‐tree node wrapping our Goals_BT.Avoid obstacle‐avoider."""
+    """
+    Behaviour‐tree node wrapping our Goals_BT.Avoid obstacle‐avoider.
+    """
     def __init__(self, aagent):
         super(BN_Avoid, self).__init__("BN_Avoid")
         self.my_agent = aagent
         self._task = None
 
     def initialise(self):
-        # start the Avoid.run() coroutine
         self._task = asyncio.create_task(Goals_BT.Avoid(self.my_agent).run())
 
     def update(self):
@@ -27,11 +30,15 @@ class BN_Avoid(pt.behaviour.Behaviour):
         if self._task:
             self._task.cancel()
 
-# BEHAVIOUR: Agent will return SUCCESS iff it has a flower in sight
+# ===========================
+# BEHAVIOUR: Detecting Flowers
+# ===========================
 class BN_DetectFlower(pt.behaviour.Behaviour):
+    """
+    Agent will return SUCCESS iff it has a flower in sight
+    """
     def __init__(self, aagent):
         self.my_goal = None
-        # print("Initializing BN_DetectFlower")
         super(BN_DetectFlower, self).__init__("BN_DetectFlower")
         self.my_agent = aagent
 
@@ -53,8 +60,13 @@ class BN_DetectFlower(pt.behaviour.Behaviour):
     def terminate(self, new_status: common.Status):
         pass
 
-# BEHAVIOUR: The agent will rotate until it's facing a flower
+# ===========================
+# BEHAVIOUR: Facing the flower
+# ===========================
 class BN_FaceFlower(pt.behaviour.Behaviour):
+    """
+    The agent will rotate until it's facing a flower
+    """
     def __init__(self, aagent):
         self.my_goal = None
         # print("Initializing BN_FaceFlower")
@@ -80,11 +92,15 @@ class BN_FaceFlower(pt.behaviour.Behaviour):
     def terminate(self, new_status: common.Status):
         self.my_goal.cancel()    
 
-# BEHAVIOUR: Walk towards the flower (Agent has to already be facing the right direction)
+# ===========================
+# BEHAVIOUR: Walking to the flower
+# ===========================
 class BN_WalkToFlower(pt.behaviour.Behaviour):
+    """
+    Agent walks towards the flower (Agent has to already be facing the right direction)
+    """
     def __init__(self, aagent):
         self.my_goal = None
-        # print("Initializing BN_WalkToFlower")
         super(BN_WalkToFlower, self).__init__("BN_WalkToFlower")
         self.my_agent = aagent
 
@@ -106,8 +122,13 @@ class BN_WalkToFlower(pt.behaviour.Behaviour):
     def terminate(self, new_status: common.Status):
         self.my_goal.cancel()
 
-# BEHAVIOUR: Detect astronaut
+# ===========================
+# BEHAVIOUR: Detecting astronaut
+# ===========================
 class BN_DetectAstronaut(pt.behaviour.Behaviour):
+    """
+    Agent will return SUCCESS iff it has an astronaut in sight
+    """
     def __init__(self, aagent):
         self.my_goal = None
         # print("Initializing BN_DetectAstronaut")
@@ -125,18 +146,21 @@ class BN_DetectAstronaut(pt.behaviour.Behaviour):
                     # print("Astronaut detected!")
                     print("BN_DetectAstronaut completed with SUCCESS")
                     return pt.common.Status.SUCCESS
-        # print("No Astronaut...")
-        # print("BN_DetectAstronaut completed with FAILURE")
+
         return pt.common.Status.FAILURE
 
     def terminate(self, new_status: common.Status):
         pass
 
-# BEHAVIOUR: The agent will rotate until it's facing a flower
+# ===========================
+# BEHAVIOUR: Facing the astronaut
+# ===========================
 class BN_FaceAstronaut(pt.behaviour.Behaviour):
+    """
+    The agent will rotate until it's facing a flower
+    """
     def __init__(self, aagent):
         self.my_goal = None
-        # print("Initializing BN_FaceAstronaut")
         super(BN_FaceAstronaut, self).__init__("BN_FaceAstronaut")
         self.my_agent = aagent
         self.last_astronaut_idx = None
@@ -160,11 +184,15 @@ class BN_FaceAstronaut(pt.behaviour.Behaviour):
     def terminate(self, new_status: common.Status):
         self.my_goal.cancel()  
 
-# BEHAVIOUR: Walk towards the astronaut (Agent has to already be facing the right direction)
+# ===========================
+# BEHAVIOUR: Chasing the astronaut
+# ===========================
 class BN_ChaseAstronaut(pt.behaviour.Behaviour):
+    """
+    Walk towards the astronaut (Agent has to already be facing the right direction)
+    """
     def __init__(self, aagent):
         self.my_goal = None
-        # print("Initializing BN_ChaseAstronaut")
         super(BN_ChaseAstronaut, self).__init__("BN_ChaseAstronaut")
         self.my_agent = aagent
 
@@ -186,10 +214,15 @@ class BN_ChaseAstronaut(pt.behaviour.Behaviour):
     def terminate(self, new_status: common.Status):
         self.my_goal.cancel()
 
+# ===========================
+# BEHAVIOUR: Retreat from the astronaut
+# ===========================
 class BN_Retreat(pt.behaviour.Behaviour):
+    """
+    Agent will retreat from the astronaut so that it is able to go back to picking flowers
+    """
     def __init__(self, aagent):
         self.my_goal = None
-        # print("Initializing BN_Retreat")
         super(BN_Retreat, self).__init__("BN_Retreat")
         self.my_agent = aagent
 
@@ -212,14 +245,19 @@ class BN_Retreat(pt.behaviour.Behaviour):
         self.my_goal.cancel()
 
 
-
+# ===========================
+# BEHAVIOUR TREE: BTCritter
+# ===========================
 class BTCritter:
+    """
+    The agent will chase the astronaut and avoid obstacles
+    """
     def __init__(self, aagent):
-        # py_trees.logging.level = py_trees.logging.Level.DEBUG
-
+        """
+        Initializes the behaviour tree for the critter agent.
+        """
         self.aagent = aagent
 
-        # FINAL VERSION
         # Chase astronaut logic
         chase = pt.composites.Sequence(name="DetectFlower", memory=True)
         chase.add_children([BN_DetectAstronaut(aagent), BN_FaceAstronaut(aagent), BN_ChaseAstronaut(aagent), BN_Retreat(aagent)])
@@ -229,26 +267,32 @@ class BTCritter:
         detection.add_children([BN_DetectFlower(aagent), BN_FaceFlower(aagent), BN_WalkToFlower(aagent)])
 
         # Roaming logic
-        # roaming = pt.composites.Parallel("Parallel", policy=py_trees.common.ParallelPolicy.SuccessOnAll())
-        # roaming.add_children([BN_ForwardRandom(aagent), BN_TurnRandom(aagent)])
         roaming = pt.composites.Sequence(name="Roaming", memory=False)
         roaming.add_child(BN_Avoid(aagent))
         
+        # Selector node
         self.root = pt.composites.Selector(name="Selector", memory=False)
-        self.root.add_children([chase, roaming]) # Detection not on the tree for the time being
+        self.root.add_children([chase, roaming])
 
         self.behaviour_tree = pt.trees.BehaviourTree(self.root)
 
-    # Function to set invalid state for a node and its children recursively
     def set_invalid_state(self, node):
+        """
+        Sets the status of a node and its children to INVALID.
+        """
         node.status = pt.common.Status.INVALID
         for child in node.children:
             self.set_invalid_state(child)
 
     def stop_behaviour_tree(self):
-        # Setting all the nodes to invalid, we force the associated asyncio tasks to be cancelled
+        """
+        Stops the behaviour tree by setting all nodes to INVALID.
+        """
         self.set_invalid_state(self.root)
 
     async def tick(self):
+        """
+        Ticks the behaviour tree.
+        """    
         self.behaviour_tree.tick()
         await asyncio.sleep(0)
