@@ -11,7 +11,6 @@ class BN_DoNothing(pt.behaviour.Behaviour):
     def __init__(self, aagent):
         self.my_agent = aagent
         self.my_goal = None
-        # print("Initializing BN_DoNothing")
         super(BN_DoNothing, self).__init__("BN_DoNothing")
 
     def initialise(self):
@@ -124,25 +123,8 @@ class BTRoam:
 
         self.aagent = aagent
 
-        # VERSION 1
-        # self.root = pt.composites.Sequence(name="Sequence", memory=True)
-        # self.root.add_children([BN_TurnRandom(aagent),
-        #                         BN_ForwardRandom(aagent),
-        #                         BN_DoNothing(aagent)])
-
-        # VERSION 2
         self.root = pt.composites.Parallel("Parallel", policy=py_trees.common.ParallelPolicy.SuccessOnAll())
         self.root.add_children([BN_ForwardRandom(aagent), BN_TurnRandom(aagent)])
-
-        # VERSION 3 (with DetectFlower)
-        # detection = pt.composites.Sequence(name="DetectFlower", memory=True)
-        # detection.add_children([BN_DetectFlower(aagent), BN_DoNothing(aagent)])
-        #
-        # roaming = pt.composites.Parallel("Parallel", policy=py_trees.common.ParallelPolicy.SuccessOnAll())
-        # roaming.add_children([BN_ForwardRandom(aagent), BN_TurnRandom(aagent)])
-        #
-        # self.root = pt.composites.Selector(name="Selector", memory=False)
-        # self.root.add_children([detection, roaming])
 
         self.behaviour_tree = pt.trees.BehaviourTree(self.root)
 
