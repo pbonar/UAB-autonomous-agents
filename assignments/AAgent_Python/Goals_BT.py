@@ -368,7 +368,6 @@ class Avoid:
 
     async def run(self):
         try:
-            print("Avoid behavior started - moving forward")
             await self.a_agent.send_message("action", "mf")
             self.move_start_time = time.time()  # Start moving timer
             
@@ -851,61 +850,8 @@ class Retreat:
 
 
 # GOALS FOR AVOIDING CRITTERS
-"""class AvoidCritter:
-    
-    When a critter has been detected, runs away by moving backwards.
-    
-    def __init__(self, a_agent):
-        self.a_agent = a_agent
-        self.rc_sensor = a_agent.rc_sensor
-        self.i_state = a_agent.i_state
-        self.state = None
-
-    async def run(self):
-        try:
-            print("AvoidCritter behavior started - checking for critters...")
-
-            # while True:
-            #     # Check if a critter is detected
-            #     sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
-            #     critter_detected = False
-
-            #     for obj in sensor_obj_info:
-            #         if obj and obj["tag"] == "AAgentCritterMantaRay":  # If critter is detected
-            #             critter_detected = True
-            #             break
-
-            #     if critter_detected:
-            print("Critter detected! Moving backwards to avoid...")
-
-            # Move backwards until the critter is no longer detected
-            await self.a_agent.send_message("action", "mb")  # Move backward command
-            while critter_detected:
-                # Check again if critter is still present
-                sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
-                critter_detected = False
-                for obj in sensor_obj_info:
-                    if obj and obj["tag"] == "AAgentCritterMantaRay":
-                        critter_detected = True
-                        await asyncio.sleep(0.1)  # Small delay before checking again
-
-                else:
-                    print("No more critter detected! Stopping.")
-                    await self.a_agent.send_message("action", "ntm")  # Stop moving
-                    return True
-
-            else:
-                print("No critter detected, continuing regular behavior...")
-                return False
-
-        except Exception as e:
-            print(f"Error in AvoidCritter: {e}")
-            await self.a_agent.send_message("action", "ntm")  # Stop if there's an error
-            return False"""
-
 class EvadeCritter:
     """
-    Estrategia mejorada para evadir critters:
     1. Detects the direction of the critter
     2. Turns 180º on the opposite direction
     3. Runs
@@ -919,6 +865,7 @@ class EvadeCritter:
 
     async def run(self):
         try:
+            print("Evader Critter Triggered")
             # Detectar posición del critter
             critter_idx = self._detect_critter_position()
             if critter_idx is None:
@@ -928,12 +875,6 @@ class EvadeCritter:
             
             # Paso 1: Giro rápido (180°)
             await self._turn_away(critter_idx)
-            
-            # Paso 2: Huida con movimiento evasivo
-            self.evade_start_time = time.time()
-            while time.time() - self.evade_start_time < self.evade_time:
-                await self._evasive_maneuver()
-                await asyncio.sleep(0.1)
             
             await self.a_agent.send_message("action", "ntm")
             return True
@@ -946,7 +887,7 @@ class EvadeCritter:
     def _detect_critter_position(self):
         sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
         for i, obj in enumerate(sensor_obj_info):
-            if obj and obj["tag"] == "AAgentCritterMantaRay":
+            if obj and obj["tag"] == "CritterMantaRay":
                 return i
         return None
 
@@ -958,12 +899,3 @@ class EvadeCritter:
         await self.a_agent.send_message("action", f"{turn_direction},0.5")
         await asyncio.sleep(1.8)  # Tiempo aproximado para giro de 180°
         await self.a_agent.send_message("action", "nt")
-
-    async def _evasive_maneuver(self):
-        """Movimiento evasivo en zig-zag"""
-        # Movimiento principal hacia adelante
-        await self.a_agent.send_message("action", "mf,1.0")
-        
-        # Movimiento lateral aleatorio
-        zigzag = random.choice(["tl,0.3", "tr,0.3"])
-        await self.a_agent.send_message("action", zigzag)

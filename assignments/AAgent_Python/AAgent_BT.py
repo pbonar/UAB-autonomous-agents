@@ -174,7 +174,8 @@ class AAgent:
         self.bts = {
             "BTRoam": BTRoam.BTRoam(self),
             "BTAstronautAlone": BTAstronautAlone.BTAstronautAlone(self),
-            "BTCritter": BTCritter.BTCritter(self)
+            "BTCritter": BTCritter.BTCritter(self),
+            "DBT": BTAstronautAlone.DBT(self)
         }
 
         # Active goal

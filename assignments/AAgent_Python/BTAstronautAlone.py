@@ -287,7 +287,8 @@ class BN_DetectCritter(pt.behaviour.Behaviour):
         sensor_obj_info = self.my_agent.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
         for index, value in enumerate(sensor_obj_info):
             if value:  # there is a hit with an object
-                if value["tag"] == "AAgentCritterMantaRay":  # Detect critter
+                if value["tag"] == "CritterMantaRay":  # Detect critter
+                    print("I detected a critter")
                     return pt.common.Status.SUCCESS
         return pt.common.Status.FAILURE
 
@@ -307,7 +308,11 @@ class BN_EvadeCritter(pt.behaviour.Behaviour):
     def update(self):
         if not self.task.done():
             return pt.common.Status.RUNNING
-        return pt.common.Status.SUCCESS if self.task.result() else pt.common.Status.FAILURE
+        if self.task.result():
+            print("BN_EvadeCritter completed with SUCCESS")
+            return pt.common.Status.SUCCESS
+        else:
+            return pt.common.Status.FAILURE
 
     def terminate(self, new_status):
         if self.task and not self.task.done():
@@ -348,6 +353,34 @@ class BTAstronautAlone:
         
         self.root = pt.composites.Selector(name="Selector", memory=False)
         self.root.add_children([evade, retreat, detection, roaming, detectCritter])
+
+        self.behaviour_tree = pt.trees.BehaviourTree(self.root)
+
+    # Function to set invalid state for a node and its children recursively
+    def set_invalid_state(self, node):
+        node.status = pt.common.Status.INVALID
+        for child in node.children:
+            self.set_invalid_state(child)
+
+    def stop_behaviour_tree(self):
+        # Setting all the nodes to invalid, we force the associated asyncio tasks to be cancelled
+        self.set_invalid_state(self.root)
+
+    async def tick(self):
+        self.behaviour_tree.tick()
+        await asyncio.sleep(0)
+
+class DBT:
+    def __init__(self, aagent):
+        self.aagent = aagent
+
+        # FINAL VERSION
+        # Evade Critter logic
+        evade = pt.composites.Sequence(name="EvadeCritter", memory=True)
+        evade.add_children([BN_DetectCritter(aagent), BN_EvadeCritter(aagent)])
+        
+        self.root = pt.composites.Selector(name="Selector", memory=False)
+        self.root.add_children([evade])
 
         self.behaviour_tree = pt.trees.BehaviourTree(self.root)
 

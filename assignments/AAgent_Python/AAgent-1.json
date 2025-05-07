@@ -8,7 +8,7 @@
     "name": "Astronaut",
     "interactable": true,
     "spawn_area": "Harvest Zone",
-    "spawn_point": 0,
+    "spawn_point": 2,
     "spawn_distance": 2,
     "debug_mode": false,
     "manual_control": false,
