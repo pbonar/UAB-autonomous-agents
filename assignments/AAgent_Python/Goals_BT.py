@@ -876,7 +876,7 @@ class EvadeCritter:
             # Paso 1: Giro rápido (180°)
             await self._turn_away(critter_idx)
             
-            await self.a_agent.send_message("action", "ntm")
+            # await self.a_agent.send_message("action", "ntm")
             return True
             
         except Exception as e:

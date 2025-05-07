@@ -497,6 +497,24 @@ class BN_EvadeCritter(pt.behaviour.Behaviour):
         if self.task and not self.task.done():
             self.task.cancel()
 
+# FROZEN
+class BN_DetectFrozen(pt.behaviour.Behaviour):
+    def __init__(self, aagent):
+        self.my_goal = None
+        # print("Initializing BN_DetectInventoryFull")
+        super(BN_DetectFrozen, self).__init__("BN_DetectFrozen")
+        self.my_agent = aagent
+        self.i_state = aagent.i_state
+    def initialise(self):
+        pass
+    def update(self):
+        if self.i_state.isFrozen:
+            return pt.common.Status.SUCCESS
+        return pt.common.Status.FAILURE
+    def terminate(self, new_status: common.Status):
+        pass
+
+
 
 # ===========================
 # BEHAVIOUR TREE: Astronaut Alone
@@ -506,7 +524,12 @@ class BTAstronautAlone:
         """
         Initializes the behaviour tree for the astronaut alone scenario.
         """
+        py_trees.logging.level = py_trees.logging.Level.DEBUG
         self.aagent = aagent
+
+        # Frozen logic (highest priority)
+        frozen = pt.composites.Sequence(name="Frozen", memory=False)
+        frozen.add_child(BN_DetectFrozen(aagent))  # Can add more later, like unfreeze logic
 
         # Evade Critter logic
         evade = pt.composites.Sequence(name="EvadeCritter", memory=True)
@@ -524,54 +547,20 @@ class BTAstronautAlone:
         roaming = pt.composites.Sequence(name="Roaming", memory=False)
         roaming.add_child(BN_Avoid(aagent))
 
-        # Critter Avoidance Logic
+        # Critter Avoidance Logic (diagnostic)
         detectCritter = pt.composites.Sequence(name="DetectCritter", memory=True)
-        detectCritter.add_children([BN_DetectCritter(aagent)])
+        detectCritter.add_child(BN_DetectCritter(aagent))
 
         # Selector node
         self.root = pt.composites.Selector(name="Selector", memory=False)
-        self.root.add_children([evade, retreat, detection, roaming, detectCritter])
-
-        self.behaviour_tree = pt.trees.BehaviourTree(self.root)
-
-    def set_invalid_state(self, node):
-        """
-        Sets the status of a node and its children to INVALID.
-        """
-        node.status = pt.common.Status.INVALID
-        for child in node.children:
-            self.set_invalid_state(child)
-
-    def stop_behaviour_tree(self):
-        """
-        Stops the behaviour tree by setting all nodes to INVALID.
-        """
-        self.set_invalid_state(self.root)
-
-    async def tick(self):
-        """
-        Ticks the behaviour tree.
-        """
-        self.behaviour_tree.tick()
-        await asyncio.sleep(0)
-
-
-# ===========================
-# BEHAVIOUR TREE: DBT
-# ===========================
-class DBT:
-    def __init__(self, aagent):
-        """
-        Initializes the DBT behaviour tree.
-        """
-        self.aagent = aagent
-
-        # Evade Critter logic
-        evade = pt.composites.Sequence(name="EvadeCritter", memory=True)
-        evade.add_children([BN_DetectCritter(aagent), BN_EvadeCritter(aagent)])
-
-        self.root = pt.composites.Selector(name="Selector", memory=False)
-        self.root.add_children([evade])
+        self.root.add_children([
+            frozen,        # 🔝 Highest priority: stay still if frozen
+            evade,
+            retreat,
+            detection,
+            roaming,
+            detectCritter
+        ])
 
         self.behaviour_tree = pt.trees.BehaviourTree(self.root)
 
