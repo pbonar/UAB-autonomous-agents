@@ -262,9 +262,6 @@ class BTCritter:
         chase = pt.composites.Sequence(name="DetectFlower", memory=True)
         chase.add_children([BN_DetectAstronaut(aagent), BN_FaceAstronaut(aagent), BN_ChaseAstronaut(aagent), BN_Retreat(aagent)])
 
-        # Gather flower logic
-        detection = pt.composites.Sequence(name="DetectFlower", memory=True)
-        detection.add_children([BN_DetectFlower(aagent), BN_FaceFlower(aagent), BN_WalkToFlower(aagent)])
 
         # Roaming logic
         roaming = pt.composites.Sequence(name="Roaming", memory=False)
