@@ -519,9 +519,9 @@ class BN_DetectFrozen(pt.behaviour.Behaviour):
 
 
 # ===========================
-# BEHAVIOUR TREE: Astronaut Alone
+# BEHAVIOUR TREE: Astronaut 
 # ===========================
-class BTAstronautAlone:
+class BTAstronaut:
     def __init__(self, aagent):
         """
         Initializes the behaviour tree for the astronaut alone scenario.

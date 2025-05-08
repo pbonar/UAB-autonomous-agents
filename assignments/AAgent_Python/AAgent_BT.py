@@ -7,7 +7,7 @@ import json
 import Sensors
 import Goals_BT
 import BTRoam
-import BTAstronautAlone
+import assignments.AAgent_Python.BTAstronaut as BTAstronaut
 import BTCritter
 
 import tkinter as tk
@@ -173,7 +173,7 @@ class AAgent:
         # Reference to the possible behaviour trees the agent can execute
         self.bts = {
             "BTRoam": BTRoam.BTRoam(self),
-            "BTAstronautAlone": BTAstronautAlone.BTAstronautAlone(self),
+            "BTAstronautAlone": BTAstronaut.BTAstronaut(self),
             "BTCritter": BTCritter.BTCritter(self)
         }
 
