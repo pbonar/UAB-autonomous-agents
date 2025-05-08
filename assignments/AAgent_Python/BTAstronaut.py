@@ -9,7 +9,7 @@ import time
 
 # ===========================
 # BEHAVIOUR: Do Nothing
-# ===========================
+# =========================== a
 class BN_DoNothing(pt.behaviour.Behaviour):
     def __init__(self, aagent):
         """
@@ -498,7 +498,7 @@ class BN_EvadeCritter(pt.behaviour.Behaviour):
             self.task.cancel()
 
 # ===========================
-# BEHAVIOUR: Is Frozen
+# BEHAVIOUR: Check if Frozen
 # ===========================
 class BN_DetectFrozen(pt.behaviour.Behaviour):
     def __init__(self, aagent):
