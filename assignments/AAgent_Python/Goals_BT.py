@@ -5,15 +5,30 @@ import time
 import Sensors
 from collections import Counter
 
+<<<<<<< HEAD
 # ---------- UTILS ----------
+=======
+# ================================
+# Utility Function: Distance Calc
+# ================================
+>>>>>>> c46547d6f078c8c3844372dab517eac296491243
 def calculate_distance(point_a, point_b):
+    """
+    Calculate Euclidean distance between two 3D points.
+    """
     distance = math.sqrt((point_b['x'] - point_a['x']) ** 2 +
                          (point_b['y'] - point_a['y']) ** 2 +
                          (point_b['z'] - point_a['z']) ** 2)
     return distance
 
+<<<<<<< HEAD
 
 # ---------- GOALS ----------
+=======
+# =======================
+# GOAL: Do Nothing
+# =======================
+>>>>>>> c46547d6f078c8c3844372dab517eac296491243
 class DoNothing:
     """
     Does nothing
@@ -24,10 +39,13 @@ class DoNothing:
         self.i_state = a_agent.i_state
 
     async def run(self):
-        print("Doing nothing")
+        print("[DoNothing]: Doing nothing")
         await asyncio.sleep(1)
         return True
 
+# =======================
+# GOAL: Forward Distance
+# =======================
 class ForwardDist:
     """
         Moves forward a certain distance specified in the parameter "dist".
@@ -51,6 +69,7 @@ class ForwardDist:
 
     async def run(self):
         try:
+<<<<<<< HEAD
             previous_dist = 0.0  
             while True:
                 if self.state == self.STOPPED:
@@ -72,19 +91,39 @@ class ForwardDist:
                         self.state = self.STOPPED
                         return True
                     elif previous_dist == current_dist:  
+=======
+            previous_dist = 0.0
+            while True:
+                if self.state == self.STOPPED:
+                    self.starting_pos = self.a_agent.i_state.position
+                    self.target_dist = random.randint(self.d_min, self.d_max) if self.original_dist < 0 else self.original_dist
+                    await self.a_agent.send_message("action", "mf")
+                    self.state = self.MOVING
+
+                elif self.state == self.MOVING:
+                    await asyncio.sleep(0.5) # Small delay to allow for movement
+                    current_dist = calculate_distance(self.starting_pos, self.i_state.position)
+                    if current_dist >= self.target_dist:
+                        await self.a_agent.send_message("action", "ntm")
+                        self.state = self.STOPPED
+                        return True
+                    elif previous_dist == current_dist:
+>>>>>>> c46547d6f078c8c3844372dab517eac296491243
                         await self.a_agent.send_message("action", "ntm")
                         self.state = self.STOPPED
                         return False
                     previous_dist = current_dist
                 else:
-                    print("Unknown state: " + str(self.state))
+                    print("[ForwardDist]: Unknown state: " + str(self.state))
                     return False
         except asyncio.CancelledError:
-            print("***** TASK Forward CANCELLED")
+            print("***** TASK Forward CANCELLED *****")
             await self.a_agent.send_message("action", "ntm")
             self.state = self.STOPPED
 
-
+# ========================
+# GOAL: Forward Until Stop
+# ========================
 class ForwardStop:
     """
         Moves forward till it finds an obstacle. Then stops.
@@ -103,7 +142,6 @@ class ForwardStop:
         try:
             while True:
                 if self.state == self.STOPPED:
-                    # Start moving
                     await self.a_agent.send_message("action", "mf")
                     self.state = self.MOVING
                 elif self.state == self.MOVING:
@@ -116,106 +154,104 @@ class ForwardStop:
                 elif self.state == self.END:
                     break
                 else:
-                    print("Unknown state: " + str(self.state))
+                    print("[ForwardStop]: Unknown state: " + str(self.state))
                     return False
         except asyncio.CancelledError:
-            print("***** TASK Forward CANCELLED")
+            print("***** TASK Forward CANCELLED *****")
             await self.a_agent.send_message("action", "stop")
             self.state = self.STOPPED
 
+# =======================
+# GOAL: Random Turn
+# =======================
 class Turn:
     """
-    The Drone randomly selects a degree of turn between 10 and 360,
-    along with a direction (left or right), and executes the turn accordingly.
+    Rotates agent randomly between 10 and 360 degrees in the random direction.
     """
     def __init__(self, a_agent):
         self.a_agent = a_agent
-        self.i_state = a_agent.i_state  # Access to the agent's state
+        self.i_state = a_agent.i_state
 
     async def run(self):
         try:
-            # Get the current Y rotation
+            # Getting Y rotation
             start_rotation = self.i_state.rotation["y"]
-            print(f"start rotation: {start_rotation}")
+            print(f"[Turn]: start rotation: {start_rotation}")
 
-            # Randomly choose turn angle and direction
+            # Choosing angle and direction
             turn_angle = random.randint(10, 360)
-            direction = random.choice(["tl", "tr"])  # "tl" for left, "tr" for right"
-
-            print(f"🔄 Turning {turn_angle} degrees to the {'left' if direction == 'tl' else 'right'}")
+            direction = random.choice(["tl", "tr"])
+            print(f"[Turn]: 🔄 Turning {turn_angle} degrees to the {'left' if direction == 'tl' else 'right'}")
             
             # Calculate the target rotation
-            if direction == "tl":  # Turning left (counter-clockwise)
-                target_rotation = (start_rotation - turn_angle + 360) % 360
-            else:  # Turning right (clockwise)
-                target_rotation = (start_rotation + turn_angle) % 360
+            target_rotation = (start_rotation - turn_angle + 360) % 360 if direction == "tl" else (start_rotation + turn_angle) % 360
+            print(f"[Turn]: Target rotation: {target_rotation}")
 
-            print(f"Target rotation: {target_rotation}")
-
-            # Send turn command
+            # Making the movement
             await self.a_agent.send_message("action", direction)
 
-            # Keep track of how much we've turned so far
-            # Store initial rotation to compare against
+            # Keeping track of how much we've turned so far
             initial_rotation = start_rotation
             last_rotation = initial_rotation
             total_turned = 0
 
-            # Continuously check rotation until we reach close to the target
+            # Continuously checking rotation until we reach close to the target
             while True:
                 current_rotation = self.i_state.rotation["y"]
                 
                 # Calculate how much we turned since last check
                 delta = 0
-                if direction == "tl":  # Left turn
-                    if current_rotation > last_rotation:  # We crossed from 0 to 359
+                if direction == "tl":
+                    if current_rotation > last_rotation:  # Crossing from 0 to 359
                         delta = -(last_rotation + (360 - current_rotation))
                     else:
                         delta = -(last_rotation - current_rotation)
-                else:  # Right turn
-                    if current_rotation < last_rotation:  # We crossed from 359 to 0
+                else:  
+                    if current_rotation < last_rotation:  # Crossing 359 to 0
                         delta = (360 - last_rotation) + current_rotation
                     else:
                         delta = current_rotation - last_rotation
                 
-                # Add to total amount turned
+                # Adding to total amount turned
                 total_turned += delta
-                print(f"Current: {current_rotation:.2f}, Delta: {delta:.2f}, Total turned: {abs(total_turned):.2f}/{turn_angle}")
+                print(f"[Turn]: Current: {current_rotation:.2f}, Delta: {delta:.2f}, Total turned: {abs(total_turned):.2f}/{turn_angle}")
                 
-                # Check if we've turned enough (with small tolerance)
+                # Checking if we've turned enough
                 if abs(total_turned) >= turn_angle - 5:
                     break
                     
-                # Update last rotation for next iteration
+                # Update last rotation
                 last_rotation = current_rotation
-                
-                await asyncio.sleep(0.05)  # Small delay to prevent overloading
+            
+                await asyncio.sleep(0.05)  # Small delay
 
             # Stop turning
             await self.a_agent.send_message("action", "nt")
 
-            print(f"✅ Turn complete! Started at {initial_rotation:.2f}°, ended at {current_rotation:.2f}°, turned {abs(total_turned):.2f}° towards the {'left' if direction == 'tl' else 'right'}")
+            print(f"[Turn]: ✅ Turn complete! Started at {initial_rotation:.2f}°, ended at {current_rotation:.2f}°, turned {abs(total_turned):.2f}° towards the {'left' if direction == 'tl' else 'right'}")
             await asyncio.sleep(2)
             return True
 
         except asyncio.CancelledError:
-            print("***** TASK Turn CANCELLED")
+            print("***** TASK Turn CANCELLED *****")
             await self.a_agent.send_message("action", "nt")
             return False
         except Exception as e:
-            print(f"❌ Error in Turn behavior: {e}")
-            await self.a_agent.send_message("action", "nt")  # Try to stop turning if there's an error
+            print(f"[Turn]: ❌ Error in Turn behavior: {e}")
+            await self.a_agent.send_message("action", "nt")
             return False
 
 
-
+# =======================
+# GOAL: Random Roam
+# =======================
 class RandomRoam:
     """
-    Probability-based random movement with:
-    - Forward/backward movement
-    - Turns using the Turn behavior
-    - Random stopping
-    All based on configurable probabilities
+    Implements probability-based random movement with the following features:
+     - Forward and backward movement with configurable durations.
+     - Random turns using the Turn behavior for dynamic exploration.
+     - Random stopping to simulate idle behavior.
+     - All actions are based on configurable probabilities for flexibility.
     """
     STOPPED = 0
     MOVING_FORWARD = 1
@@ -258,7 +294,7 @@ class RandomRoam:
             await self.cleanup()
             return False
         except Exception as e:
-            print(f"RandomRoam error: {e}")
+            print(f"[RandomRoam]: RandomRoam error: {e}")
             await self.cleanup()
             return False
 
@@ -279,7 +315,6 @@ class RandomRoam:
 
     async def set_state(self, new_state):
         """Clean current state and setup new state"""
-        # Clean up current state
         if self.state == self.MOVING_FORWARD or self.state == self.MOVING_BACKWARD:
             await self.a_agent.send_message("action", "stop")
         elif self.state == self.TURNING and self.current_turn_task:
@@ -338,7 +373,9 @@ class RandomRoam:
                 pass
             await self.a_agent.send_message("action", "nt")
 
-
+# =======================
+# GOAL: Avoid Obstacles
+# =======================
 class Avoid:
     """
     Reliable obstacle avoidance with 30-degree turn increments.
@@ -495,7 +532,11 @@ class Avoid:
         await self.a_agent.send_message("action", "stop")
         print("Avoid behavior stopped")
 
-# ----------- NEW ASSIGNMENT -----------
+# ---------------------------------------------------- NEW ASSIGNMENT ----------------------------------------------------
+
+# =======================
+# GOAL: Directed Turn
+# =======================
 class DirectedTurn:
     """
     The Drone randomly selects a degree of turn between 10 and 360,
@@ -503,31 +544,21 @@ class DirectedTurn:
     """
     def __init__(self, a_agent, direction):
         self.a_agent = a_agent
-        self.i_state = a_agent.i_state  # Access to the agent's state
+        self.i_state = a_agent.i_state
         self.direction = direction
 
     async def run(self):
         try:
-            # Get the current Y rotation
             start_rotation = self.i_state.rotation["y"]
-            # Randomly choose turn angle and direction
             turn_angle = 1
-
-            # print(f"🔄 Turning {turn_angle} degrees to the {'left' if self.direction == 'tl' else 'right'}")
             
             # Calculate the target rotation
-            if self.direction == "tl":  # Turning left (counter-clockwise)
-                target_rotation = (start_rotation - turn_angle + 360) % 360
-            else:  # Turning right (clockwise)
-                target_rotation = (start_rotation + turn_angle) % 360
-
-            # print(f"Target rotation: {target_rotation}")
+            target_rotation = (start_rotation - turn_angle + 360) % 360 if self.direction == "tl" else (start_rotation + turn_angle) % 360
 
             # Send turn command
             await self.a_agent.send_message("action", self.direction)
 
             # Keep track of how much we've turned so far
-            # Store initial rotation to compare against
             initial_rotation = start_rotation
             last_rotation = initial_rotation
             total_turned = 0
@@ -535,10 +566,9 @@ class DirectedTurn:
             # Continuously check rotation until we reach close to the target
             while True:
                 current_rotation = self.i_state.rotation["y"]
-                
-                # Calculate how much we turned since last check
                 delta = 0
-                if self.direction == "tl":  # Left turn
+                
+                if self.direction == "tl":
                     if current_rotation > last_rotation:  # We crossed from 0 to 359
                         delta = -(last_rotation + (360 - current_rotation))
                     else:
@@ -551,7 +581,6 @@ class DirectedTurn:
                 
                 # Add to total amount turned
                 total_turned += delta
-                # print(f"Current: {current_rotation:.2f}, Delta: {delta:.2f}, Total turned: {abs(total_turned):.2f}/{turn_angle}")
                 
                 # Check if we've turned enough (with small tolerance)
                 if abs(total_turned) >= turn_angle - 5:
@@ -561,23 +590,22 @@ class DirectedTurn:
                 last_rotation = current_rotation
                 await asyncio.sleep(0.05)  # Small delay to prevent overloading
 
-            # Stop turning
             await self.a_agent.send_message("action", "nt")
-
-            # print(f"✅ Turn complete! Started at {initial_rotation:.2f}°, ended at {current_rotation:.2f}°, turned {abs(total_turned):.2f}° towards the {'left' if self.direction == 'tl' else 'right'}")
             await asyncio.sleep(0.05)
             return True
 
         except asyncio.CancelledError:
-            print("***** TASK Turn CANCELLED")
+            print("[DirectedTurn]: ***** TASK Turn CANCELLED")
             await self.a_agent.send_message("action", "nt")
             return False
         except Exception as e:
-            print(f"❌ Error in Turn behavior: {e}")
-            await self.a_agent.send_message("action", "nt")  # Try to stop turning if there's an error
+            print(f"[DirectedTurn]: ❌ Error in Turn behavior: {e}")
+            await self.a_agent.send_message("action", "nt")
             return False
         
-# PHASE 1: ASTRONAUT ALONE
+# =======================
+# GOAL: Face Flower
+# =======================
 class FaceFlower:
     """
     Rotates the astronaut so that it's looking towards the detected flower
@@ -617,11 +645,13 @@ class FaceFlower:
                 return True
 
             direction = self.turn_direction(flower_idx)
-            # print(f"🔄 Turning to face flower (from sensor {flower_idx} to 2), direction: {direction}")
+
             await DirectedTurn(self.a_agent, direction).run()
             await asyncio.sleep(0.01)
 
-
+# =======================
+# GOAL: Approach and Collect Flower
+# =======================
 class WalkToFlower:
     """
     Moves forward until the inventory has more AlienFlowers than when it started.
@@ -639,33 +669,32 @@ class WalkToFlower:
     async def run(self):
         try:
             start_count = self.get_flower_count()
-            # print(f"Starting with {start_count} AlienFlowers in inventory")
 
-            # Start moving forward
             await self.a_agent.send_message("action", "mf")
             await asyncio.sleep(0.05)
 
             while True:
                 current_count = self.get_flower_count()
-                # print(f"Current AlienFlowers: {current_count}")
                 
                 if current_count > start_count:
-                    print("✅ New flower added to inventory!")
+                    print("[WalkToFlower]: ✅ New flower added to inventory!")
                     await self.a_agent.send_message("action", "ntm")  # Stop moving
                     return True
                 await asyncio.sleep(0.1)  # Small delay between checks
 
         except asyncio.CancelledError:
-            print("***** TASK Approach CANCELLED")
+            print("***** TASK WalkToFlower CANCELLED")
             await self.a_agent.send_message("action", "ntm")
             return False
 
         except Exception as e:
-            print(f"❌ Error in ApproachAndCollectFlower: {e}")
+            print(f"[WalkToFlower]: ❌ Error in WalkToFlower: {e}")
             await self.a_agent.send_message("action", "ntm")
             return False
 
-
+# =======================
+# GOAL: Collect Flower
+# =======================
 class CollectFlower:
     """
     Collects a nearby AlienFlower.
@@ -676,14 +705,16 @@ class CollectFlower:
     async def run(self):
         try:
             print("Trying to collect flower...")
-            await self.a_agent.send_message("action", "collect:AlienFlower") # mirar formato
+            await self.a_agent.send_message("action", "collect:AlienFlower")
             return True
         
         except Exception as e:
             print(f"Error in CollectFlower: {e}")
             return False
-
         
+# =======================
+# GOAL: Walk to Base
+# =======================
 class WalkToBase:
     """
     Properly walks to base and verifies arrival using onRoute status
@@ -712,6 +743,9 @@ class WalkToBase:
             print(f"Base navigation error: {e}")
             return False
         
+# =======================
+# GOAL: Leave Flowers
+# =======================        
 class LeaveFlowers:
     """
     Leaves 2 AlienFlowers at the base.
@@ -721,7 +755,6 @@ class LeaveFlowers:
 
     async def run(self):
         try:
-            # print("Leaving flowers at the Base...")
             await self.a_agent.send_message("action", "leave,AlienFlower,2")
             asyncio.sleep(0.5)
             return True
@@ -730,10 +763,14 @@ class LeaveFlowers:
             print(f"Error in LeaveFlowers: {e}")
             return False
         
-# GOALS UNIQUE TO CRITTERS
+# ------------------------------------------------- NEW ASSIGNMENT - CRITTERS -------------------------------------------------
+
+# =======================
+# GOAL: Face Astronaut
+# =======================  
 class FaceAstronaut:
     """
-    Rotates the astronaut so that it's looking towards the detected flower
+    Rotates the Critter so that it's looking towards the Astronaut
     """
     def __init__(self, a_agent):
         self.a_agent = a_agent
@@ -748,10 +785,9 @@ class FaceAstronaut:
         elif astronaut_idx > 2:
             return "tr"
         else:
-            return None  # Already centered
+            return None
 
     async def run(self):
-        print("I am going to face the astronaut") #del
         while True:
             sensor_obj_info = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
             astronaut_idx = None
@@ -763,30 +799,34 @@ class FaceAstronaut:
                     break
 
             if astronaut_idx is None:
-                print("No astronaut detected")
+                print("[FaceAstronaut]: No astronaut detected")
                 return False
 
             if astronaut_idx == 2:
-                print("Looking towards astronaut")
+                print("[FaceAstronaut]: Looking towards astronaut")
                 return True
 
             direction = self.turn_direction(astronaut_idx)
             await self.a_agent.send_message("action", "ntm")
-            # print(f"🔄 Turning to face flower (from sensor {astronaut_idx} to 2), direction: {direction}")
             await DirectedTurn(self.a_agent, direction).run()
             await asyncio.sleep(0.01)
 
-
+# =======================
+# GOAL: Walk to Astronaut
+# ======================= 
 class WalkToAstronaut:
+    """
+    Moves forward until the astronaut is within a certain distance.
+    """
     def __init__(self, a_agent, touch_threshold=0.6):
         self.a_agent = a_agent
         self.rc_sensor = a_agent.rc_sensor
-        self.touch_threshold = touch_threshold  # Almost touching (5 cm)
-        self.min_distance = float('inf')       # Track closest distance
+        self.touch_threshold = touch_threshold  # Almost touching
+        self.min_distance = float('inf')        # Track closest distance
 
     async def run(self):
-        print(f"🚶 Walking until astronaut is within {self.touch_threshold}m...")
-        await self.a_agent.send_message("action", "mf")  # Move forward
+        print(f"[WalkToAstronaut]: 🚶 Walking until astronaut is within {self.touch_threshold}m...")
+        await self.a_agent.send_message("action", "mf")
 
         while True:
             sensor_data = self.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
@@ -796,30 +836,33 @@ class WalkToAstronaut:
                 if obj and obj["tag"] == "Astronaut":
                     distance = obj.get("distance", None)
                     if distance is not None:
-                        print(f"📡 Distance: {distance:.3f}m")
+                        print(f"[WalkToAstronaut]: 📡 Distance: {distance:.3f}m")
                         astronaut_detected = True
                         self.min_distance = min(self.min_distance, distance)
 
                         # Case 1: Definitely touching
                         if distance <= self.touch_threshold:
-                            print("✅ Astronaut touched!")
+                            print("[WalkToAstronaut]: ✅ Astronaut touched!")
                             await self.a_agent.send_message("action", "ntm")
                             return True
 
                         # Case 2: Not moving closer (likely stuck/colliding)
                         elif (distance >= self.min_distance - 0.2) and (self.min_distance < 0.3):  # Tiny buffer
-                            print("⚠️ Distance not decreasing. Assuming collision.")
+                            print("[WalkToAstronaut]: ⚠️ Distance not decreasing. Assuming collision.")
                             await self.a_agent.send_message("action", "ntm")
                             return True
 
             # Case 3: Astronaut lost (sensor missed it at close range)
             if not astronaut_detected and self.min_distance < 0.5:
-                print("⚠️ Astronaut lost at close range. Assuming touch.")
+                print("[WalkToAstronaut]: ⚠️ Astronaut lost at close range. Assuming touch.")
                 await self.a_agent.send_message("action", "ntm")
                 return True
 
             await asyncio.sleep(0.1)  # Avoid busy-waiting
         
+# =======================
+# GOAL: Retreat
+# =======================  
 class Retreat:
     """
     Turns and leaves after biting an astronaut
@@ -832,22 +875,21 @@ class Retreat:
         try:
             await self.a_agent.send_message("action", "ntm")
             await self.a_agent.send_message("action", "tr")
-            await asyncio.sleep(1.8)  # Tiempo aproximado para giro de 180°
+            await asyncio.sleep(1.8)  # Approximately time of turning 180°
             await self.a_agent.send_message("action", "nt")
             await self.a_agent.send_message("action", "mf")
             await asyncio.sleep(1)
             await self.a_agent.send_message("action", "ntm")
-            print("✅ Retreat complete!")
+            print("[Retreat]: ✅ Retreat complete!")
             return True
 
         except Exception as e:
-            print(f"❌ Error in Retreat: {e}")
+            print(f"[Retreat]: ❌ Error in Retreat: {e}")
             await self.a_agent.send_message("action", "ntm")
             return False
 
 
-
-# GOALS FOR AVOIDING CRITTERS
+# ---------------------------------------------- NEW ASSIGNMENT - AVOIDING CRITTERS ----------------------------------------------
 class EvadeCritter:
     """
     1. Detects the direction of the critter
@@ -858,27 +900,25 @@ class EvadeCritter:
     def __init__(self, a_agent):
         self.a_agent = a_agent
         self.rc_sensor = a_agent.rc_sensor
-        self.evade_time = 3  # segundos de huida
+        self.evade_time = 3  # Time of evasion in seconds
         self.evade_start_time = 0
 
     async def run(self):
         try:
-            print("Evader Critter Triggered")
-            # Detectar posición del critter
+            print("[EvadeCritter]: Evader Critter Triggered")
+            # Detect critter position
             critter_idx = self._detect_critter_position()
             if critter_idx is None:
                 return False
 
-            print(f"Critter detected at sensor {critter_idx}! Initiating evasion...")
+            print(f"[EvadeCritter]: Critter detected at sensor {critter_idx}! Initiating evasion...")
             
-            # Paso 1: Giro rápido (180°)
+            # Fast turn (180°)
             await self._turn_away(critter_idx)
-            
-            # await self.a_agent.send_message("action", "ntm")
             return True
             
         except Exception as e:
-            print(f"Error in EvadeCritter: {e}")
+            print(f"[EvadeCritter]: Error in EvadeCritter: {e}")
             await self.a_agent.send_message("action", "ntm")
             return False
 
@@ -890,10 +930,10 @@ class EvadeCritter:
         return None
 
     async def _turn_away(self, critter_idx):
-        """Gira 180° en dirección opuesta al critter"""
-        turn_direction = "tr" if critter_idx < 2 else "tl"  # Giro opuesto
+        """Turn 180° in direction opposite to critter"""
+        turn_direction = "tr" if critter_idx < 2 else "tl"
         
-        print(f"Turning away from critter (180° {turn_direction})")
+        print(f"[EvadeCritter]: Turning away from critter (180° {turn_direction})")
         await self.a_agent.send_message("action", f"{turn_direction},0.5")
-        await asyncio.sleep(1.8)  # Tiempo aproximado para giro de 180°
+        await asyncio.sleep(1.8)  # Approximate time of turning 180°
         await self.a_agent.send_message("action", "nt")
