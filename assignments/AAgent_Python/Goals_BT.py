@@ -5,13 +5,10 @@ import time
 import Sensors
 from collections import Counter
 
-<<<<<<< HEAD
-# ---------- UTILS ----------
-=======
 # ================================
 # Utility Function: Distance Calc
 # ================================
->>>>>>> c46547d6f078c8c3844372dab517eac296491243
+
 def calculate_distance(point_a, point_b):
     """
     Calculate Euclidean distance between two 3D points.
@@ -21,14 +18,11 @@ def calculate_distance(point_a, point_b):
                          (point_b['z'] - point_a['z']) ** 2)
     return distance
 
-<<<<<<< HEAD
-
 # ---------- GOALS ----------
-=======
 # =======================
 # GOAL: Do Nothing
 # =======================
->>>>>>> c46547d6f078c8c3844372dab517eac296491243
+
 class DoNothing:
     """
     Does nothing
@@ -67,59 +61,46 @@ class ForwardDist:
         self.starting_pos = a_agent.i_state.position
         self.state = self.STOPPED
 
-    async def run(self):
-        try:
-<<<<<<< HEAD
-            previous_dist = 0.0  
-            while True:
-                if self.state == self.STOPPED:
-                    self.starting_pos = self.a_agent.i_state.position
+async def run(self):
+    try:
+        previous_dist = 0.0
+        while True:
+            if self.state == self.STOPPED:
+                self.starting_pos = self.a_agent.i_state.position
 
-                    if self.original_dist < 0:
-                        self.target_dist = random.randint(self.d_min, self.d_max)
-                    else:
-                        self.target_dist = self.original_dist
-
-                    await self.a_agent.send_message("action", "mf")
-                    self.state = self.MOVING
-                elif self.state == self.MOVING:
-                    await asyncio.sleep(0.5)
-                    current_dist = calculate_distance(self.starting_pos, self.i_state.position)
-                    
-                    if current_dist >= self.target_dist:  
-                        await self.a_agent.send_message("action", "ntm")
-                        self.state = self.STOPPED
-                        return True
-                    elif previous_dist == current_dist:  
-=======
-            previous_dist = 0.0
-            while True:
-                if self.state == self.STOPPED:
-                    self.starting_pos = self.a_agent.i_state.position
-                    self.target_dist = random.randint(self.d_min, self.d_max) if self.original_dist < 0 else self.original_dist
-                    await self.a_agent.send_message("action", "mf")
-                    self.state = self.MOVING
-
-                elif self.state == self.MOVING:
-                    await asyncio.sleep(0.5) # Small delay to allow for movement
-                    current_dist = calculate_distance(self.starting_pos, self.i_state.position)
-                    if current_dist >= self.target_dist:
-                        await self.a_agent.send_message("action", "ntm")
-                        self.state = self.STOPPED
-                        return True
-                    elif previous_dist == current_dist:
->>>>>>> c46547d6f078c8c3844372dab517eac296491243
-                        await self.a_agent.send_message("action", "ntm")
-                        self.state = self.STOPPED
-                        return False
-                    previous_dist = current_dist
+                if self.original_dist < 0:
+                    self.target_dist = random.randint(self.d_min, self.d_max)
                 else:
-                    print("[ForwardDist]: Unknown state: " + str(self.state))
+                    self.target_dist = self.original_dist
+
+                await self.a_agent.send_message("action", "mf")
+                self.state = self.MOVING
+
+            elif self.state == self.MOVING:
+                await asyncio.sleep(0.5)
+                current_dist = calculate_distance(self.starting_pos, self.i_state.position)
+
+                if current_dist >= self.target_dist:
+                    await self.a_agent.send_message("action", "ntm")
+                    self.state = self.STOPPED
+                    return True
+
+                elif previous_dist == current_dist:
+                    await self.a_agent.send_message("action", "ntm")
+                    self.state = self.STOPPED
                     return False
-        except asyncio.CancelledError:
-            print("***** TASK Forward CANCELLED *****")
-            await self.a_agent.send_message("action", "ntm")
-            self.state = self.STOPPED
+
+                previous_dist = current_dist
+
+            else:
+                print("[ForwardDist]: Unknown state: " + str(self.state))
+                return False
+
+    except asyncio.CancelledError:
+        print("***** TASK Forward CANCELLED *****")
+        await self.a_agent.send_message("action", "ntm")
+        self.state = self.STOPPED
+
 
 # ========================
 # GOAL: Forward Until Stop
