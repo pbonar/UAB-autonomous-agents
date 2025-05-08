@@ -497,7 +497,9 @@ class BN_EvadeCritter(pt.behaviour.Behaviour):
         if self.task and not self.task.done():
             self.task.cancel()
 
-# FROZEN
+# ===========================
+# BEHAVIOUR: Is Frozen
+# ===========================
 class BN_DetectFrozen(pt.behaviour.Behaviour):
     def __init__(self, aagent):
         self.my_goal = None

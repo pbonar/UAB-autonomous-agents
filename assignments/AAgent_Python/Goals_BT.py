@@ -5,12 +5,15 @@ import time
 import Sensors
 from collections import Counter
 
+# ---------- UTILS ----------
 def calculate_distance(point_a, point_b):
     distance = math.sqrt((point_b['x'] - point_a['x']) ** 2 +
                          (point_b['y'] - point_a['y']) ** 2 +
                          (point_b['z'] - point_a['z']) ** 2)
     return distance
 
+
+# ---------- GOALS ----------
 class DoNothing:
     """
     Does nothing
@@ -48,32 +51,27 @@ class ForwardDist:
 
     async def run(self):
         try:
-            previous_dist = 0.0  # Used to detect if we are stuck
+            previous_dist = 0.0  
             while True:
                 if self.state == self.STOPPED:
-                    # starting position before moving
                     self.starting_pos = self.a_agent.i_state.position
-                    # Before start moving, calculate the distance we want to move
+
                     if self.original_dist < 0:
                         self.target_dist = random.randint(self.d_min, self.d_max)
                     else:
                         self.target_dist = self.original_dist
-                    # Start moving
+
                     await self.a_agent.send_message("action", "mf")
                     self.state = self.MOVING
-                    # print("TARGET DISTANCE: " + str(self.target_dist))
                 elif self.state == self.MOVING:
-                    # If we are moving
-                    await asyncio.sleep(0.5)  # Wait for a little movement
+                    await asyncio.sleep(0.5)
                     current_dist = calculate_distance(self.starting_pos, self.i_state.position)
-                    # print(f"Current distance: {current_dist}")
-                    if current_dist >= self.target_dist:  # Check if we already have covered the required distance
+                    
+                    if current_dist >= self.target_dist:  
                         await self.a_agent.send_message("action", "ntm")
                         self.state = self.STOPPED
                         return True
-                    elif previous_dist == current_dist:  # We are not moving
-                        # print(f"previous dist: {previous_dist}, current dist: {current_dist}")
-                        # print("NOT MOVING")
+                    elif previous_dist == current_dist:  
                         await self.a_agent.send_message("action", "ntm")
                         self.state = self.STOPPED
                         return False
