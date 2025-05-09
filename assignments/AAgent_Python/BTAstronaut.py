@@ -9,7 +9,7 @@ import time
 
 # ===========================
 # BEHAVIOUR: Do Nothing
-# =========================== a
+# ===========================
 class BN_DoNothing(pt.behaviour.Behaviour):
     def __init__(self, aagent):
         """
@@ -530,8 +530,8 @@ class BTAstronaut:
         self.aagent = aagent
 
         # Frozen logic (highest priority)
-        frozen = pt.composites.Sequence(name="Frozen", memory=False)
-        frozen.add_child(BN_DetectFrozen(aagent))  # Can add more later, like unfreeze logic
+        frozen = pt.composites.Sequence(name="Frozen", memory=True)
+        frozen.add_children([BN_DetectFrozen(aagent), BN_DoNothing(aagent)])
 
         # Evade Critter logic
         evade = pt.composites.Sequence(name="EvadeCritter", memory=True)

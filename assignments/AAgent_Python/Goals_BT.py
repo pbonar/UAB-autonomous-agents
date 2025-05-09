@@ -511,8 +511,6 @@ class Avoid:
 
 
 
-
-
 # ---------------------------------------------------- NEW ASSIGNMENT - ASTRONAUT ----------------------------------------------------
 
 # =======================
@@ -520,7 +518,7 @@ class Avoid:
 # =======================
 class DirectedTurn:
     """
-    The Drone randomly selects a degree of turn between 10 and 360,
+    The agent randomly selects a degree of turn between 10 and 360,
     along with a direction (left or right), and executes the turn accordingly.
     """
     def __init__(self, a_agent, direction):
@@ -685,12 +683,12 @@ class CollectFlower:
     
     async def run(self):
         try:
-            print("Trying to collect flower...")
+            print("[CollectFlower]: Trying to collect flower...")
             await self.a_agent.send_message("action", "collect:AlienFlower")
             return True
         
         except Exception as e:
-            print(f"Error in CollectFlower: {e}")
+            print(f"[CollectFlower]: Error in CollectFlower: {e}")
             return False
         
 # =======================
@@ -706,7 +704,7 @@ class WalkToBase:
 
     async def run(self):
         try:
-            print("Initiating base navigation...")
+            print("[WalkToBase]: Initiating base navigation...")
             await self.a_agent.send_message("action", "walk_to,Base")
             
             # Give initial movement time to start
@@ -717,11 +715,11 @@ class WalkToBase:
                 print("Still navigating to base...")
                 await asyncio.sleep(0.5)
             
-            print("Confirmed arrival at base!")
+            print("[WalkToBase]: Confirmed arrival at base!")
             return True
             
         except Exception as e:
-            print(f"Base navigation error: {e}")
+            print(f"[WalkToBase]: Base navigation error: {e}")
             return False
         
 # =======================
@@ -744,6 +742,9 @@ class LeaveFlowers:
             print(f"Error in LeaveFlowers: {e}")
             return False
         
+
+
+
 # ------------------------------------------------- NEW ASSIGNMENT - CRITTERS -------------------------------------------------
 
 # =======================
