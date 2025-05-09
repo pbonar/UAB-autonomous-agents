@@ -1,13 +1,14 @@
 import sys
 from collections import deque
 
+
 import aiohttp # type: ignore
 import asyncio
 import json
 import Sensors
 import Goals_BT
 import BTRoam
-import assignments.AAgent_Python.BTAstronaut as BTAstronaut
+import BTAstronaut
 import BTCritter
 
 import tkinter as tk
