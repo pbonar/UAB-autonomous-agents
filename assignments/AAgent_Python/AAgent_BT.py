@@ -7,7 +7,7 @@ import json
 import Sensors
 import Goals_BT
 import BTRoam
-import assignments.AAgent_Python.BTAstronaut as BTAstronaut
+import BTAstronaut
 import BTCritter
 
 import tkinter as tk
