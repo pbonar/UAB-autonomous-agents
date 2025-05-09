@@ -1,6 +1,7 @@
 import sys
 from collections import deque
 
+
 import aiohttp # type: ignore
 import asyncio
 import json
