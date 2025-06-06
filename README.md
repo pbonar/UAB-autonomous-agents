@@ -55,10 +55,10 @@ The reports section provides detailed documentation and analysis for each projec
 
 ## 👥 Authors
 
-Piotr Bonar  
-Nicholas Pey
-Xavier Sánchez
-Carlota Criado
+Piotr Bonar<br>
+Nicholas Pey<br>
+Xavier Sánchez<br>
+Carlota Criado<br>
 
 Universitat Autònoma de Barcelona, 2025
 
