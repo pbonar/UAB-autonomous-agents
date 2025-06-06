@@ -1,0 +1,15 @@
+ASTRONAULT
+cd assignments/AAgent_Python
+python3 -m venv myenv
+source myenv/bin/activate
+pip install aiohttp
+pip install py_trees
+python3 AAgent_BT.py AAgent-1.json   
+
+CRITTERS
+cd assignments/AAgent_Python
+python3 -m venv myenv
+source myenv/bin/activate
+pip install aiohttp
+pip install py_trees
+python3 AAgent_BT.py AAgent-2.json

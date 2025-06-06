@@ -1,10 +1,7 @@
-assignments/drone-aape/agent/NOTES.txt
-assignments/drone-aape/agent/__pycache__
-assignments/drone-aape/agent/myenv
-assignments/drone-aape/uab-agents-simulator-0.2.0.app
-.DS_Store
-exam1_notes.docx
-assignments/AAgent_Python/__pycache__
-assignments/AAgent_Python/uab-agents-simulator-0.3.0.app
-assignments/AAgent_Python/uab-agents-simulator-0.3.1.app
-assignments/AAgent_Python/NOTES.txt
+.clj-kondo
+.lsp/.cache
+assignments/drone-aape/__pycache__
+assignments/drone-aape/myenv
+assignments/drone-racing
+assignments/flower-collector/__pycache__
+assignments/flower-collector/myenv

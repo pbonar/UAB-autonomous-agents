@@ -1,0 +1,5 @@
+cd assignments/drone-aape/agent
+python3 -m venv myenv             
+source myenv/bin/activate
+pip install aiohttp
+python3 AAgent_BT.py AAgent-1.json
